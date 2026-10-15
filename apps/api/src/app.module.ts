@@ -13,12 +13,16 @@ import { env } from './config/env';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { AmenitiesModule } from './modules/amenities/amenities.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { LocationsModule } from './modules/locations/locations.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { MediaModule } from './modules/media/media.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { SavedModule } from './modules/saved/saved.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -38,10 +42,14 @@ import { PrismaModule } from './prisma/prisma.module';
     HealthModule,
     AuthModule,
     UsersModule,
+    LocationsModule,
+    AmenitiesModule,
     PropertiesModule,
     ListingsModule,
     MediaModule,
     LeadsModule,
+    SavedModule,
+    DashboardModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

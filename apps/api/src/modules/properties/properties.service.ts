@@ -19,8 +19,9 @@ export class PropertiesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(query: PropertyListQueryDto) {
+    // Archiving soft-deletes the row, so the ARCHIVED view must include soft-deleted properties.
     const where: Prisma.PropertyWhereInput = {
-      deletedAt: null,
+      ...(query.status === 'ARCHIVED' ? {} : { deletedAt: null }),
       ...(query.cityId ? { cityId: query.cityId } : {}),
       ...(query.type ? { type: query.type } : {}),
       ...(query.status ? { status: query.status } : {}),

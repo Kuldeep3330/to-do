@@ -5,7 +5,7 @@ const CACHE_TTL_MS = 30_000;
 
 @Injectable()
 export class RbacService {
-  private cache = new Map<string, { codes: string[]; roleCodes: string[]; at: number }>();
+  private cache = new Map<string, { codes: string[]; roleCodes: string[]; active: boolean; at: number }>();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -17,6 +17,11 @@ export class RbacService {
     return (await this.load(userId)).roleCodes;
   }
 
+  /** False for disabled or deleted users, so a still-valid access token stops working promptly. */
+  async isActive(userId: string): Promise<boolean> {
+    return (await this.load(userId)).active;
+  }
+
   invalidate(userId: string): void {
     this.cache.delete(userId);
   }
@@ -25,11 +30,16 @@ export class RbacService {
     return roleCodes.some((c) => c === 'SUPER_ADMIN' || c === 'ADMIN' || c === 'SALES_AGENT');
   }
 
-  private async load(userId: string): Promise<{ codes: string[]; roleCodes: string[] }> {
+  private async load(userId: string): Promise<{ codes: string[]; roleCodes: string[]; active: boolean }> {
     const hit = this.cache.get(userId);
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
       return hit;
     }
+    const account = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true, deletedAt: true },
+    });
+    const active = !!account && account.status !== 'DISABLED' && account.deletedAt === null;
     const rows = await this.prisma.userRole.findMany({
       where: { userId },
       include: {
@@ -44,7 +54,7 @@ export class RbacService {
     const codes = [
       ...new Set(rows.flatMap((r) => r.role.permissions.map((rp) => rp.permission.code))),
     ];
-    const entry = { codes, roleCodes, at: Date.now() };
+    const entry = { codes: active ? codes : [], roleCodes: active ? roleCodes : [], active, at: Date.now() };
     this.cache.set(userId, entry);
     return entry;
   }
