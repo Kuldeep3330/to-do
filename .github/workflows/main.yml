@@ -1,25 +1,24 @@
-name: Deploy Todo App to AWS S3
+name: NCR Homes CI
 
 on:
   push:
-    branches:
-      - main
+  pull_request:
 
 jobs:
-  deploy:
+  typecheck:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          node-version: "20"
+          cache: npm
 
-      - name: Deploy to S3
-        run: |
-          aws s3 sync . s3://kuldeep-to-do --delete
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
