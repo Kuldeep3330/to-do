@@ -147,6 +147,54 @@ describe('admin media HTTP', () => {
     expect(storage.objects.size).toBeGreaterThanOrEqual(3);
   });
 
+  it('lists uploaded images on the admin listing detail in display order with thumbnails', async () => {
+    const listingId = await createListing();
+    const first = await request(app.getHttpServer())
+      .post(`/api/v1/admin/listings/${listingId}/media`)
+      .set('Cookie', adminCookie)
+      .attach('file', jpeg, 'one.jpg');
+    const second = await request(app.getHttpServer())
+      .post(`/api/v1/admin/listings/${listingId}/media`)
+      .set('Cookie', adminCookie)
+      .attach('file', await jpegFile(64, 48), 'two.jpg');
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+
+    const before = await request(app.getHttpServer())
+      .get(`/api/v1/admin/listings/${listingId}`)
+      .set('Cookie', adminCookie);
+    expect(before.status).toBe(200);
+    expect(before.body.data.originalCount).toBe(2);
+    expect(before.body.data.media.map((m: { id: string }) => m.id)).toEqual([
+      first.body.data.id,
+      second.body.data.id,
+    ]);
+    const item = before.body.data.media[0];
+    expect(item.url).toMatch(/^https?:\/\//);
+    expect(item.thumbnailUrl).toMatch(/_card\.webp$/);
+    expect(item).not.toHaveProperty('storageKey');
+
+    // Move the second image to the front.
+    const moved = await request(app.getHttpServer())
+      .patch(`/api/v1/admin/media/${second.body.data.id}`)
+      .set('Cookie', adminCookie)
+      .send({ sortOrder: 0 });
+    expect(moved.status).toBe(200);
+    const demoted = await request(app.getHttpServer())
+      .patch(`/api/v1/admin/media/${first.body.data.id}`)
+      .set('Cookie', adminCookie)
+      .send({ sortOrder: 1 });
+    expect(demoted.status).toBe(200);
+
+    const after = await request(app.getHttpServer())
+      .get(`/api/v1/admin/listings/${listingId}`)
+      .set('Cookie', adminCookie);
+    expect(after.body.data.media.map((m: { id: string }) => m.id)).toEqual([
+      second.body.data.id,
+      first.body.data.id,
+    ]);
+  });
+
   it('rejects gif by magic bytes', async () => {
     const listingId = await createListing();
     const gif = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00]);

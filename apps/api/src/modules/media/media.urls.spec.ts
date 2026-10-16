@@ -57,11 +57,11 @@ describe('media.urls', () => {
     expect(coverMedia(withoutCard)?.id).toBe('o1');
   });
 
-  it('gallery is ORIGINAL only, sorted by sortOrder', () => {
+  it('gallery is one entry per original in sortOrder, preferring the DETAIL rendition', () => {
     const urls = galleryUrls(rows);
     expect(urls).toEqual([
-      expect.stringContaining('listings/l/u.jpg'),
-      expect.stringContaining('listings/l/v.jpg'),
+      expect.stringContaining('listings/l/u_detail.webp'), // has a DETAIL variant
+      expect.stringContaining('listings/l/v.jpg'), // no variant yet: falls back to the original
     ]);
     expect(urls.some((u) => u.includes('_card'))).toBe(false);
   });

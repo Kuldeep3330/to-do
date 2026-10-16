@@ -6,6 +6,7 @@ import { AppError } from '../../common/errors/app-error';
 import { offsetOf, publicOffsetOrThrow } from '../../common/dto/pagination';
 import { slugify, withSuffix } from '../../common/utils/slug';
 import { PrismaService } from '../../prisma/prisma.service';
+import { publicUrl, storageGroupPrefix } from '../media/media.urls';
 import { toAdminListing, toPublicListingCard, toPublicListingDetail } from './listings.mapper';
 import {
   AdminListingListQueryDto,
@@ -29,7 +30,7 @@ const ADMIN_INCLUDE = {
   },
 } as const;
 
-const PUBLIC_INCLUDE = {
+export const PUBLIC_INCLUDE = {
   property: {
     include: {
       locality: { include: { city: true } },
@@ -84,7 +85,33 @@ export class ListingsService {
     if (!row) {
       throw AppError.notFound('Listing not found');
     }
-    return toAdminListing(row);
+    return { ...toAdminListing(row), media: await this.adminMedia(id) };
+  }
+
+  /** ORIGINAL images in display order, each with its CARD thumbnail when one exists. */
+  private async adminMedia(listingId: string) {
+    const rows = await this.prisma.media.findMany({
+      where: { listingId },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+    const cards = new Map(
+      rows.filter((r) => r.variant === 'CARD').map((r) => [storageGroupPrefix(r.storageKey), r]),
+    );
+    return rows
+      .filter((r) => r.variant === 'ORIGINAL')
+      .map((o) => {
+        const card = cards.get(storageGroupPrefix(o.storageKey));
+        return {
+          id: o.id,
+          url: publicUrl(o.storageKey),
+          thumbnailUrl: publicUrl((card ?? o).storageKey),
+          contentType: o.contentType,
+          byteSize: o.byteSize,
+          width: o.width,
+          height: o.height,
+          sortOrder: o.sortOrder,
+        };
+      });
   }
 
   async searchPublic(query: SearchListingsQueryDto) {

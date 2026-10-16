@@ -14,7 +14,10 @@
     "db:generate": "npm run prisma:generate -w apps/api",
     "db:migrate": "npm run prisma:migrate -w apps/api",
     "db:migrate:deploy": "npm run prisma:migrate:deploy -w apps/api",
-    "db:seed": "npm run prisma:seed -w apps/api"
+    "db:seed": "npm run prisma:seed -w apps/api",
+    "test:web": "npm test -w apps/web",
+    "test:e2e": "npm run test:e2e -w apps/web",
+    "build:web": "npm run build -w apps/web"
   },
   "engines": {
     "node": ">=20"

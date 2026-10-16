@@ -5,12 +5,14 @@ import { Request } from 'express';
 import { ACCESS_COOKIE, env } from '../../config/env';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AppError } from '../errors/app-error';
+import { RbacService } from '../../modules/rbac/rbac.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly jwt: JwtService,
+    private readonly rbac: RbacService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -33,6 +35,10 @@ export class JwtAuthGuard implements CanActivate {
         secret: env().JWT_ACCESS_SECRET,
       });
       if (!payload.sub) {
+        throw AppError.unauthenticated();
+      }
+      // A valid signature is not enough: the account may have been disabled since the token was issued.
+      if (!(await this.rbac.isActive(payload.sub))) {
         throw AppError.unauthenticated();
       }
       req.user = { id: payload.sub };

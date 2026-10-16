@@ -4,21 +4,175 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run typecheck
 
-      - name: Install
-        run: npm ci
+  api-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ncr
+          POSTGRES_PASSWORD: ncr
+          POSTGRES_DB: ncr_homes_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ncr -d ncr_homes_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Never point these at anything but the throwaway service database above.
+      DATABASE_URL: postgresql://ncr:ncr@localhost:5432/ncr_homes_test?schema=public
+      TEST_DATABASE_URL: postgresql://ncr:ncr@localhost:5432/ncr_homes_test?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-at-least-32-characters-long
+      JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters-long
+      PUBLIC_APP_URL: http://localhost:3000
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: ncr-media
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio-secret
+      S3_PUBLIC_BASE_URL: http://localhost:9000/ncr-media
+      MAIL_FROM: noreply@localhost
+      OPS_INBOX_EMAIL: ops@localhost
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      BOOTSTRAP_ADMIN_PASSWORD: ChangeMeAdmin1
+      BOOTSTRAP_ADMIN_PHONE: "+919999999999"
+      BOOTSTRAP_ADMIN_NAME: Bootstrap Admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:migrate:deploy
+      - run: npm run db:seed
+      - name: API tests
+        run: npm test -w apps/api
 
-      - name: Typecheck
-        run: npm run typecheck
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Web unit tests
+        run: npm test -w apps/web
+      - name: Web production build
+        run: npm run build -w apps/web
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ncr
+          POSTGRES_PASSWORD: ncr
+          POSTGRES_DB: ncr_homes
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ncr -d ncr_homes"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ncr:ncr@localhost:5432/ncr_homes?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-at-least-32-characters-long
+      JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters-long
+      PUBLIC_APP_URL: http://localhost:3000
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: ncr-media
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio-secret
+      S3_PUBLIC_BASE_URL: http://localhost:9000/ncr-media
+      MAIL_FROM: noreply@localhost
+      OPS_INBOX_EMAIL: ops@localhost
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      BOOTSTRAP_ADMIN_PASSWORD: ChangeMeAdmin1
+      BOOTSTRAP_ADMIN_PHONE: "+919999999999"
+      BOOTSTRAP_ADMIN_NAME: Bootstrap Admin
+      API_PORT: "3001"
+      API_ORIGIN: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # Tests log in many times from one IP; the limiter is covered by its own API tests.
+      RATE_LIMIT_ENABLED: "false"
+      E2E_BASE_URL: http://localhost:3000
+      E2E_CHANNEL: ""
+      IMAGES_UNOPTIMIZED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Start S3-compatible storage and create the public bucket
+        run: |
+          docker run -d --name storage -p 9000:9000 \
+            -e RUSTFS_ACCESS_KEY=minio -e RUSTFS_SECRET_KEY=minio-secret -e RUSTFS_ADDRESS=":9000" \
+            rustfs/rustfs:latest /data
+          export AWS_ACCESS_KEY_ID=minio AWS_SECRET_ACCESS_KEY=minio-secret AWS_DEFAULT_REGION=us-east-1
+          for i in $(seq 1 30); do
+            aws --endpoint-url http://localhost:9000 s3api create-bucket --bucket ncr-media 2>/dev/null && break
+            sleep 2
+          done
+          aws --endpoint-url http://localhost:9000 s3api put-bucket-policy --bucket ncr-media --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::ncr-media/*"]}]}'
+
+      - run: npm run db:generate
+      - run: npm run db:migrate:deploy
+      - run: npm run db:seed
+
+      - name: Build and start the API
+        run: |
+          npm run build -w apps/api
+          nohup node apps/api/dist/main.js > api.log 2>&1 &
+      - name: Build and start the web app
+        run: |
+          NODE_ENV=production npm run build -w apps/web
+          cd apps/web && NODE_ENV=production nohup npx next start --port 3000 > ../../web.log 2>&1 &
+      - name: Wait for both servers
+        run: |
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:3001/ready >/dev/null && curl -fs http://localhost:3000/login >/dev/null && exit 0
+            sleep 2
+          done
+          echo "servers did not become ready"; tail -n 50 api.log web.log; exit 1
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: End-to-end tests
+        run: npm run test:e2e -w apps/web
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          retention-days: 7
+      - name: Show server logs on failure
+        if: failure()
+        run: tail -n 100 api.log web.log

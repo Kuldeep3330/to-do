@@ -213,7 +213,7 @@ describe('admin properties HTTP', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('omits archived properties from admin get and list', async () => {
+  it('omits archived properties from admin get and the default list but shows them under status=ARCHIVED', async () => {
     const title = `ArchiveMe ${Date.now()}`;
     const created = await request(app.getHttpServer())
       .post('/api/v1/admin/properties')
@@ -239,6 +239,19 @@ describe('admin properties HTTP', () => {
       .set('Cookie', adminCookie);
     expect(list.status).toBe(200);
     expect(list.body.data).toHaveLength(0);
+
+    const archivedView = await request(app.getHttpServer())
+      .get('/api/v1/admin/properties')
+      .query({ q: title, status: 'ARCHIVED' })
+      .set('Cookie', adminCookie);
+    expect(archivedView.status).toBe(200);
+    expect(archivedView.body.data.map((p: { id: string }) => p.id)).toEqual([id]);
+
+    const activeView = await request(app.getHttpServer())
+      .get('/api/v1/admin/properties')
+      .query({ q: title, status: 'ACTIVE' })
+      .set('Cookie', adminCookie);
+    expect(activeView.body.data).toHaveLength(0);
   });
 
   it('returns 409 when archiving a property with a live listing', async () => {

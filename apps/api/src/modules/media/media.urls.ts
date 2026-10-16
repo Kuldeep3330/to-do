@@ -41,5 +41,9 @@ export function galleryUrls(media: MediaRow[]): string[] {
   const originals = media
     .filter((m) => m.variant === 'ORIGINAL')
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  return originals.map((m) => publicUrl(m.storageKey));
+  // Serve the 1600px DETAIL rendition when it exists; originals can be several MB.
+  const details = new Map(
+    media.filter((m) => m.variant === 'DETAIL').map((m) => [storageGroupPrefix(m.storageKey), m]),
+  );
+  return originals.map((m) => publicUrl((details.get(storageGroupPrefix(m.storageKey)) ?? m).storageKey));
 }
