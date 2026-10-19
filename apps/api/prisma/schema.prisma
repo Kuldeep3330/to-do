@@ -376,6 +376,9 @@ model Lead {
   message          String?    @db.VarChar(1000)
   status           LeadStatus @default(NEW)
   source           LeadSource @default(WEB_FORM)
+  firstResponseAt  DateTime?  @map("first_response_at") @db.Timestamptz(6)
+  closedAmount     BigInt?    @map("closed_amount")
+  closedOn         DateTime?  @map("closed_on") @db.Date
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -388,6 +391,8 @@ model Lead {
   @@index([assignedToUserId, status, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
   @@index([phone, listingId, createdAt(sort: Desc)])
+  @@index([status, firstResponseAt, createdAt])
+  @@index([status, closedOn])
   @@map("leads")
 }
 

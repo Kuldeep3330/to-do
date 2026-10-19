@@ -113,7 +113,10 @@ export const adminMediaApi = {
 export const adminLeadsApi = {
   list: (query?: Q) => api<Paged<AdminLead>>('/api/v1/admin/leads', { query }),
   get: (id: string) => apiData<AdminLead>(`/api/v1/admin/leads/${id}`),
-  update: (id: string, body: { status?: LeadStatus; assignedToUserId?: string | null }) =>
+  update: (
+    id: string,
+    body: { status?: LeadStatus; assignedToUserId?: string | null; closedAmount?: number; closedOn?: string },
+  ) =>
     apiData<AdminLead>(`/api/v1/admin/leads/${id}`, { method: 'PATCH', body }),
 };
 

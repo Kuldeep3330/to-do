@@ -124,7 +124,7 @@ describe('LeadsService', () => {
     prisma.$transaction.mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops));
     prisma.lead.findMany.mockResolvedValue([]);
     prisma.lead.count.mockResolvedValue(0);
-    await service.listAdmin(actorId, { page: 1, pageSize: 24 });
+    await service.listAdmin(actorId, { page: 1, pageSize: 24, overdue: false });
     expect(prisma.lead.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { assignedToUserId: actorId },

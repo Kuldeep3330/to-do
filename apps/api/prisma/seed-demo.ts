@@ -163,6 +163,7 @@ async function seedLeads(listingIds: string[], users: Record<string, string>) {
         email: `lead${i + 1}@example.com`,
         message: 'I am interested in this property. Please call me.',
         status: statuses[i],
+        firstResponseAt: statuses[i] === 'NEW' ? null : new Date(),
       },
     });
   }
@@ -175,6 +176,7 @@ async function seedAgentData(listingIds: string[], users: Record<string, string>
   for (let i = 0; i < names.length; i++) {
     const email = `agentlead${i + 1}@example.com`;
     if (await prisma.lead.findFirst({ where: { email } })) continue;
+    const createdAt = new Date(Date.now() - i * 86_400_000);
     await prisma.lead.create({
       data: {
         listingId: listingIds[(i * 2) % listingIds.length],
@@ -184,10 +186,17 @@ async function seedAgentData(listingIds: string[], users: Record<string, string>
         email,
         message: 'Is this still available? I would like to schedule a visit this weekend.',
         status: statuses[i],
-        createdAt: new Date(Date.now() - i * 86_400_000),
+        createdAt,
+        // Lead 1 is fresh (waiting), lead 2 is a day old and overdue, the rest were answered at varying speeds.
+        firstResponseAt: statuses[i] === 'NEW' ? null : new Date(createdAt.getTime() + (20 + 25 * i) * 60_000),
       },
     });
   }
+  // The demo's won lead closed two days ago at a realistic value, so the dashboard has deal figures.
+  await prisma.lead.updateMany({
+    where: { email: 'agentlead7@example.com', status: 'WON', closedAmount: null },
+    data: { closedAmount: BigInt(28000), closedOn: new Date(`${new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10)}T00:00:00.000Z`) },
+  });
   for (const uid of [users.SALES_AGENT, users.CUSTOMER]) {
     for (const listingId of listingIds.slice(0, 4)) {
       await prisma.savedListing.upsert({

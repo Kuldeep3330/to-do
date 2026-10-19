@@ -6,7 +6,9 @@ import { notFound } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone } from 'lucide-react';
 import { PageHeader } from '@/components/admin/page-header';
-import { ButtonLink } from '@/components/ui/button';
+import { DealDialog } from '@/components/admin/deal-dialog';
+import { ResponseBadge } from '@/components/admin/response-badge';
+import { Button, ButtonLink } from '@/components/ui/button';
 import { Card, ErrorState, Skeleton } from '@/components/ui/feedback';
 import { Field, Select } from '@/components/ui/form-controls';
 import { LeadStatusBadge } from '@/components/ui/status-badge';
@@ -15,7 +17,7 @@ import { adminLeadsApi, adminStaffApi } from '@/lib/api/endpoints';
 import { ApiError, errorMessage } from '@/lib/api/errors';
 import type { AdminLead, LeadStatus } from '@/lib/api/types';
 import { isAdmin, useMe } from '@/lib/auth/use-auth';
-import { formatDateTime, formatPhone, humanize } from '@/lib/format';
+import { formatDate, formatDateTime, formatINR, formatPhone, humanize } from '@/lib/format';
 import { LEAD_STATUSES } from '@/lib/leads';
 
 export function LeadDetail({ id }: { id: string }) {
@@ -23,6 +25,7 @@ export function LeadDetail({ id }: { id: string }) {
   const toast = useToast();
   const { data: me } = useMe();
   const canAssign = isAdmin(me);
+  const [dealMode, setDealMode] = React.useState<'win' | 'edit' | null>(null);
 
   const lead = useQuery({ queryKey: ['admin', 'leads', id], queryFn: () => adminLeadsApi.get(id) });
   const staff = useQuery({
@@ -33,11 +36,17 @@ export function LeadDetail({ id }: { id: string }) {
   });
 
   const update = useMutation({
-    mutationFn: (patch: { status?: LeadStatus; assignedToUserId?: string | null }) => adminLeadsApi.update(id, patch),
+    mutationFn: (patch: Parameters<typeof adminLeadsApi.update>[1]) => adminLeadsApi.update(id, patch),
     onSuccess: async (data: AdminLead, patch) => {
       qc.setQueryData(['admin', 'leads', id], data);
       await qc.invalidateQueries({ queryKey: ['admin', 'leads'], exact: false });
-      toast.success(patch.status ? `Marked ${humanize(patch.status).toLowerCase()}` : 'Assignment updated');
+      toast.success(
+        patch.status
+          ? `Marked ${humanize(patch.status).toLowerCase()}`
+          : patch.closedAmount !== undefined
+            ? 'Deal saved'
+            : 'Assignment updated',
+      );
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
@@ -60,7 +69,12 @@ export function LeadDetail({ id }: { id: string }) {
         title={l.name}
         description={`Enquiry received ${formatDateTime(l.createdAt)}`}
         breadcrumbs={[{ label: 'Leads', href: '/admin/leads' }, { label: l.name }]}
-        actions={<LeadStatusBadge status={l.status} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ResponseBadge lead={l} />
+            <LeadStatusBadge status={l.status} />
+          </div>
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -128,7 +142,12 @@ export function LeadDetail({ id }: { id: string }) {
               id="lead-status"
               value={l.status}
               disabled={update.isPending}
-              onChange={(e) => update.mutate({ status: e.target.value as LeadStatus })}
+              onChange={(e) => {
+                const next = e.target.value as LeadStatus;
+                // Winning needs the closing value, so ask for it first instead of sending a request that would fail.
+                if (next === 'WON' && l.status !== 'WON') setDealMode('win');
+                else update.mutate({ status: next });
+              }}
             >
               {LEAD_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -160,7 +179,45 @@ export function LeadDetail({ id }: { id: string }) {
             </div>
           )}
         </Card>
+
+        {l.status === 'WON' && (
+          <Card className="h-fit space-y-3 p-5 lg:col-start-2" aria-labelledby="deal-heading">
+            <h2 id="deal-heading" className="text-base font-semibold">
+              Deal
+            </h2>
+            <dl className="space-y-2 text-sm">
+              <div>
+                <dt className="text-ink-muted">{l.listing?.intent === 'RENT' ? 'Monthly rent agreed' : 'Price agreed'}</dt>
+                <dd className="text-lg font-semibold">{l.closedAmount ? formatINR(l.closedAmount) : 'Not recorded'}</dd>
+              </div>
+              <div>
+                <dt className="text-ink-muted">Closed on</dt>
+                <dd className="font-medium">{l.closedOn ? formatDate(l.closedOn) : 'Not recorded'}</dd>
+              </div>
+            </dl>
+            <Button variant="outline" size="sm" onClick={() => setDealMode('edit')}>
+              {l.closedAmount ? 'Edit deal' : 'Add deal details'}
+            </Button>
+          </Card>
+        )}
       </div>
+
+      <DealDialog
+        open={dealMode !== null}
+        onOpenChange={(o) => !o && setDealMode(null)}
+        intent={l.listing ? (l.listing.intent === 'RENT' ? 'RENT' : 'BUY') : null}
+        enquiredOn={l.createdAt.slice(0, 10)}
+        initial={{ amount: l.closedAmount, closedOn: l.closedOn }}
+        editing={dealMode === 'edit'}
+        onSubmit={async (v) => {
+          await update.mutateAsync({
+            ...(dealMode === 'win' ? { status: 'WON' as const } : {}),
+            closedAmount: v.amount,
+            closedOn: v.closedOn,
+          });
+          setDealMode(null);
+        }}
+      />
     </>
   );
 }

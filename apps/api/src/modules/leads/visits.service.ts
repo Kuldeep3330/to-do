@@ -232,6 +232,10 @@ export class VisitsService {
           throw AppError.conflict(`Cannot ${command} a visit in its current status`);
         }
         if (rule.to === 'CONFIRMED') {
+          await tx.lead.updateMany({
+            where: { id: current.leadId, firstResponseAt: null },
+            data: { firstResponseAt: new Date() },
+          });
           // Only move the lead forward; never resurrect a finished one.
           await tx.lead.updateMany({
             where: { id: current.leadId, status: { notIn: [...CLOSED_LEAD, 'VISIT_SCHEDULED'] } },

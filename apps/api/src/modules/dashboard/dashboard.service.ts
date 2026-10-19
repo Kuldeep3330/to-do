@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { median, overdueCutoff, slaMinutes } from '../leads/leads.sla';
+import { todayIst } from '../leads/visits.service';
 import { RbacService } from '../rbac/rbac.service';
 
 export type DashboardCounts = {
@@ -10,6 +12,20 @@ export type DashboardCounts = {
   leadsNew: number;
   leadsToday: number;
   leadsTotal: number;
+  /** New leads still waiting past the response target. */
+  leadsOverdue: number;
+  /** Leads won with a closing date in the last 30 days. */
+  dealsWon: number;
+  /** Deals won as a share of leads created in the same 30 days; null when there were none. Approximate: they are not the same people. */
+  winRatePercent: number | null;
+  /** Sum of agreed monthly rents on won rentals (INR per month). */
+  wonRentMonthly: number;
+  /** Sum of agreed prices on won sales (INR). */
+  wonSaleValue: number;
+  /** The response target in minutes. */
+  responseTargetMinutes: number;
+  /** Median minutes to first response over the last 30 days; null when nothing has been answered yet. */
+  medianResponseMinutes: number | null;
   /** True when lead counts are limited to leads assigned to the viewer. */
   scopedToAssigned: boolean;
 };
@@ -30,13 +46,42 @@ export class DashboardService {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const [leadsNew, leadsToday, leadsTotal, published, drafts] = await Promise.all([
+    const since = new Date(Date.now() - 30 * 86_400_000);
+    const sinceDay = new Date(`${todayIst(since)}T00:00:00.000Z`);
+
+    const [leadsNew, leadsToday, leadsTotal, published, drafts, overdue, answered, won, recentLeads] = await Promise.all([
       this.prisma.lead.count({ where: { ...leadScope, status: 'NEW' } }),
       this.prisma.lead.count({ where: { ...leadScope, createdAt: { gte: startOfDay } } }),
       this.prisma.lead.count({ where: leadScope }),
       seeListings ? this.prisma.listing.count({ where: { status: 'PUBLISHED', deletedAt: null } }) : null,
       seeListings ? this.prisma.listing.count({ where: { status: 'DRAFT', deletedAt: null } }) : null,
+      this.prisma.lead.count({
+        where: { ...leadScope, status: 'NEW', firstResponseAt: null, createdAt: { lt: overdueCutoff() } },
+      }),
+      this.prisma.lead.findMany({
+        where: { ...leadScope, firstResponseAt: { not: null }, createdAt: { gte: since } },
+        select: { createdAt: true, firstResponseAt: true },
+        take: 1000,
+      }),
+      this.prisma.lead.findMany({
+        where: { ...leadScope, status: 'WON', closedAmount: { not: null }, closedOn: { gte: sinceDay } },
+        select: { closedAmount: true, listing: { select: { intent: true } } },
+        take: 5000,
+      }),
+      this.prisma.lead.count({ where: { ...leadScope, createdAt: { gte: since } } }),
     ]);
+
+    let wonRentMonthly = 0;
+    let wonSaleValue = 0;
+    for (const w of won) {
+      const amount = Number(w.closedAmount);
+      if (w.listing?.intent === 'RENT') wonRentMonthly += amount;
+      else wonSaleValue += amount;
+    }
+
+    const minutes = answered.map((l) =>
+      Math.max(0, Math.round(((l.firstResponseAt as Date).getTime() - l.createdAt.getTime()) / 60_000)),
+    );
 
     return {
       publishedListings: published,
@@ -44,6 +89,13 @@ export class DashboardService {
       leadsNew,
       leadsToday,
       leadsTotal,
+      leadsOverdue: overdue,
+      dealsWon: won.length,
+      winRatePercent: recentLeads === 0 ? null : Math.round((won.length / recentLeads) * 100),
+      wonRentMonthly,
+      wonSaleValue,
+      responseTargetMinutes: slaMinutes(),
+      medianResponseMinutes: median(minutes),
       scopedToAssigned: !seeAllLeads,
     };
   }

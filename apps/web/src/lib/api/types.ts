@@ -188,6 +188,18 @@ export type AdminLead = {
   source: string;
   createdAt: string;
   updatedAt: string;
+  /** When the lead first left NEW (or a visit was confirmed); null while still waiting. */
+  firstResponseAt: string | null;
+  /** createdAt plus the response target. */
+  respondBy: string;
+  /** Still waiting and past `respondBy`. */
+  overdue: boolean;
+  /** Minutes from enquiry to first response, once answered. */
+  responseMinutes: number | null;
+  /** Deal value in INR (monthly rent for rentals); only set on won leads. */
+  closedAmount: number | null;
+  /** Day the deal closed, YYYY-MM-DD. */
+  closedOn: string | null;
   listing: { id: string; slug: string; title: string; intent: Intent; status: ListingStatus } | null;
   assignee: { id: string; name: string; email: string } | null;
 };
@@ -227,5 +239,12 @@ export type DashboardCounts = {
   leadsNew: number;
   leadsToday: number;
   leadsTotal: number;
+  leadsOverdue: number;
+  dealsWon: number;
+  winRatePercent: number | null;
+  wonRentMonthly: number;
+  wonSaleValue: number;
+  responseTargetMinutes: number;
+  medianResponseMinutes: number | null;
   scopedToAssigned: boolean;
 };

@@ -7,6 +7,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { toAdminLead, toCustomerLead } from './leads.mapper';
+import { overdueCutoff } from './leads.sla';
+import { todayIst } from './visits.service';
 import {
   AdminLeadListQueryDto,
   createLeadSchema,
@@ -146,6 +148,9 @@ export class LeadsService {
     const where: Prisma.LeadWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.assignedTo ? { assignedToUserId: query.assignedTo } : {}),
+      ...(query.overdue
+        ? { status: 'NEW' as const, firstResponseAt: null, createdAt: { lt: overdueCutoff() } }
+        : {}),
     };
     if (!codes.includes('lead.read_all')) {
       if (!codes.includes('lead.read_assigned')) {
@@ -164,7 +169,7 @@ export class LeadsService {
       this.prisma.lead.count({ where }),
     ]);
     return {
-      data: rows.map(toAdminLead),
+      data: rows.map((r) => toAdminLead(r)),
       meta: { page: query.page, pageSize: query.pageSize, total },
     };
   }
@@ -189,7 +194,8 @@ export class LeadsService {
   }
 
   async patchAdmin(actorId: string, id: string, input: PatchLeadInput) {
-    if (input.status === undefined && input.assignedToUserId === undefined) {
+    const dealFields = input.closedAmount !== undefined || input.closedOn !== undefined;
+    if (input.status === undefined && input.assignedToUserId === undefined && !dealFields) {
       throw AppError.validation('Nothing to update');
     }
     const codes = await this.rbac.getPermissionCodes(actorId);
@@ -198,7 +204,7 @@ export class LeadsService {
     }
     const canUpdateAll = codes.includes('lead.update_all');
     const canUpdateAssigned = codes.includes('lead.update_assigned');
-    if (input.status !== undefined && !canUpdateAll && !canUpdateAssigned) {
+    if ((input.status !== undefined || dealFields) && !canUpdateAll && !canUpdateAssigned) {
       throw AppError.forbidden();
     }
     const current = await this.prisma.lead.findFirst({
@@ -214,15 +220,69 @@ export class LeadsService {
     if (input.assignedToUserId) {
       await this.assertAssignable(input.assignedToUserId);
     }
+    const deal = this.resolveDeal(current, input);
     const row = await this.prisma.lead.update({
       where: { id },
       data: {
         ...(input.status !== undefined ? { status: input.status } : {}),
+        // First move out of NEW is the response the customer was promised.
+        ...(input.status !== undefined && input.status !== 'NEW' && !current.firstResponseAt
+          ? { firstResponseAt: new Date() }
+          : {}),
         ...(input.assignedToUserId !== undefined ? { assignedToUserId: input.assignedToUserId } : {}),
+        ...deal,
       },
       include: ADMIN_INCLUDE,
     });
     return toAdminLead(row);
+  }
+
+  /**
+   * Deal tracking rules: a lead cannot be marked won without its closing value, deal details only
+   * exist on won leads, and moving a lead away from won clears them.
+   */
+  private resolveDeal(
+    current: { status: string; createdAt: Date; closedAmount?: bigint | null; closedOn?: Date | null },
+    input: PatchLeadInput,
+  ): { closedAmount?: bigint | null; closedOn?: Date | null } {
+    const next = input.status ?? current.status;
+    const hasDeal = input.closedAmount !== undefined || input.closedOn !== undefined;
+
+    if (next !== 'WON') {
+      if (hasDeal) {
+        throw AppError.validation('Deal details can only be set on a won lead', [
+          { path: 'closedAmount', message: 'Mark the lead as won first' },
+        ]);
+      }
+      return current.status === 'WON' ? { closedAmount: null, closedOn: null } : {};
+    }
+
+    const amount = input.closedAmount ?? (current.closedAmount != null ? Number(current.closedAmount) : undefined);
+    if (amount === undefined) {
+      throw AppError.validation('Closing value is required to mark a lead as won', [
+        { path: 'closedAmount', message: 'Enter the rent or sale price agreed' },
+      ]);
+    }
+
+    const today = todayIst();
+    const existingDay = current.closedOn ? current.closedOn.toISOString().slice(0, 10) : undefined;
+    const day = input.closedOn ?? existingDay ?? today;
+    const parsed = new Date(`${day}T00:00:00.000Z`);
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== day) {
+      throw AppError.validation('Invalid date', [{ path: 'closedOn', message: 'Not a real calendar date' }]);
+    }
+    if (day > today) {
+      throw AppError.validation('Closing date is in the future', [
+        { path: 'closedOn', message: 'A deal cannot close in the future' },
+      ]);
+    }
+    const createdDay = todayIst(current.createdAt);
+    if (day < createdDay) {
+      throw AppError.validation('Closing date is before the enquiry', [
+        { path: 'closedOn', message: `Choose ${createdDay} or later` },
+      ]);
+    }
+    return { closedAmount: BigInt(amount), closedOn: parsed };
   }
 
   private async assertAssignable(userId: string) {

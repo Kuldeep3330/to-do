@@ -174,8 +174,8 @@ Weeks 1–8 of the original plan are built (see `docs/27-project-status.md`). Be
 | 1 | Verified badge (date and verifying agent) | Done |
 | 2 | Freshness: last-confirmed date, confirm action, auto-pause job | Done |
 | 3 | Visit booking (customer request, staff confirm slot) | Done |
-| 4 | Lead response timer (2-hour target) | Planned |
-| 5 | Deal tracking on WON leads | Planned |
+| 4 | Lead response timer (2-hour target) | Done |
+| 5 | Deal tracking on WON leads | Done |
 | 6 | Amenities on listing detail | Planned |
 | 7 | Locality landing pages | Planned |
 

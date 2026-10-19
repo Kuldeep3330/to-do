@@ -63,8 +63,8 @@ Ordered by value for effort. Items 1 and 2 are built.
 | 1 | **Verified badge** with date and verifying agent (admin action, public display, audit log) | Done 2026-10-18 |
 | 2 | **Freshness**: "last confirmed" date, "Confirm available" action, hourly job pausing listings not confirmed within `LISTING_STALE_DAYS` (default 15, `0` disables) | Done 2026-10-18 |
 | 3 | **Visit booking**: signed-in customer requests a visit, staff confirm a slot, customer can follow and cancel | Done 2026-10-18 |
-| 4 | **Lead response timer**: overdue highlighting in the inbox against the 2-hour target | Planned |
-| 5 | **Deal tracking**: closed price and date when a lead becomes WON, so revenue and conversion can be measured | Planned |
+| 4 | **Lead response timer**: overdue highlighting in the inbox against the 2-hour target | Done 2026-10-19 |
+| 5 | **Deal tracking**: closed price and date when a lead becomes WON, so revenue and conversion can be measured | Done 2026-10-19 |
 | 6 | **Amenities on listing detail** (known gap from doc 26) | Planned |
 | 7 | **Locality landing pages** for search traffic | Planned |
 
@@ -110,6 +110,25 @@ Track from the first week of the pilot:
 - **API:** `POST/GET /api/v1/me/visits`, `POST /api/v1/me/visits/:id/cancel`; `GET /api/v1/admin/visits`, `POST /api/v1/admin/visits/:id/{confirm,complete,no-show,cancel}`. Admins see all visits; agents see visits on leads assigned to them. Staff actions are audited (`UPDATE_VISIT`); an ops email (`visit_requested_ops`) and a `visit_requested` analytics event are sent on request.
 - **Web:** "Book a visit" on the listing page (sidebar card and mobile bar), **My visits** in the account area, and a **Visits** queue in the admin with one-click actions.
 - **Not included yet:** reminders, rescheduling by the customer, a customer email on confirmation.
+
+## 8c. Implementation notes for item 4 (lead response timer)
+
+- **Definition:** a lead is "waiting" while its status is `NEW` and it has no recorded first response. It is **overdue** once it has waited longer than `LEAD_RESPONSE_SLA_MINUTES` (default 120).
+- **What counts as a response:** the first time staff move the lead out of `NEW` to any other status, or confirm a visit on it. Assigning a lead to an agent does **not** count, because the customer has still not heard from anyone. The first response is recorded once (`leads.first_response_at`) and later status changes never rewrite it.
+- **Inbox:** a Response column shows "Respond within 45 min", "Overdue by 3 h" or "Answered in 20 min"; the lead page shows the same; an "Overdue only" filter is shareable via `?overdue=true`.
+- **Dashboard:** new tiles for overdue leads and the median time to first response over the last 30 days. Both respect the viewer's scope (agents see their own assigned leads).
+- **API:** admin lead payloads gain `firstResponseAt`, `respondBy`, `overdue`, `responseMinutes`; `GET /admin/leads?overdue=true`; dashboard gains `leadsOverdue`, `responseTargetMinutes`, `medianResponseMinutes`. Migration `20261019120000_lead_first_response` backfills existing worked leads using their last update time.
+- **Not included yet:** notifications or escalation when a lead goes overdue, business-hours handling (the clock runs 24 hours), and per-agent response reports. Decide whether the 2-hour promise should pause overnight before launch.
+
+## 8d. Implementation notes for item 5 (deal tracking)
+
+- **Rule:** a lead cannot be marked **Won** without a closing value. The value is the **monthly rent** for a rental and the **sale price** for a purchase (whole INR). The closing day defaults to today, cannot be in the future, and cannot be before the enquiry arrived (India calendar day).
+- **Lifecycle:** deal details exist only on won leads. Staff can correct them later ("Edit deal"). Moving a lead away from Won clears them, so the numbers never describe a deal that is no longer won.
+- **Inbox:** choosing Won opens a dialog for the amount and date instead of failing server-side. The lead page shows a Deal card.
+- **Dashboard (last 30 days):** deals won, an approximate win rate (deals won divided by new enquiries in the same period), total agreed monthly rent, and total agreed sale value. Rent and sale values are kept separate because adding a monthly rent to a purchase price would be meaningless. Agents see only their own assigned leads.
+- **API:** `PATCH /admin/leads/:id` accepts `closedAmount` and `closedOn`; lead payloads return them; dashboard adds `dealsWon`, `winRatePercent`, `wonRentMonthly`, `wonSaleValue`. Migration `20261019130000_lead_deal_tracking` adds `closed_amount` (must be positive) and `closed_on`.
+- **Legacy data:** leads that were already Won before this change have no recorded value. They show "Not recorded" with an "Add deal details" button, and are left out of the money totals.
+- **Not included yet:** the fee your team earns on each deal (the money model is still undecided, see section 6), per-agent deal reports, and exporting deals for invoicing. Once a fee is chosen, it can be computed from these fields.
 
 ## 9. Open questions for the owner
 

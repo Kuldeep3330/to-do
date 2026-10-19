@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, FilePen, Inbox, Megaphone, Sun, Users } from 'lucide-react';
+import { AlarmClock, ArrowRight, FilePen, IndianRupee, Inbox, Megaphone, Sun, Timer, Trophy, Users } from 'lucide-react';
 import { PageHeader } from '@/components/admin/page-header';
 import { Alert, Card, ErrorState, Skeleton } from '@/components/ui/feedback';
 import { dashboardApi } from '@/lib/api/endpoints';
 import { errorMessage } from '@/lib/api/errors';
 import { isAdmin, useMe } from '@/lib/auth/use-auth';
+import { formatINRCompact } from '@/lib/format';
+import { formatDuration } from '@/lib/leads';
 
-type Tile = { label: string; value: number | null; href: string; icon: React.ComponentType<{ className?: string }>; hint?: string };
+type Tile = { label: string; value: number | string | null; href: string; icon: React.ComponentType<{ className?: string }>; hint?: string };
 
 export function DashboardView() {
   const { data: me } = useMe();
@@ -21,6 +23,44 @@ export function DashboardView() {
   const tiles: Tile[] = d
     ? [
         { label: 'New leads', value: d.leadsNew, href: '/admin/leads?status=NEW', icon: Inbox, hint: 'Waiting for a first call' },
+        {
+          label: 'Overdue leads',
+          value: d.leadsOverdue,
+          href: '/admin/leads?overdue=true',
+          icon: AlarmClock,
+          hint: `Still waiting after ${formatDuration(d.responseTargetMinutes)}`,
+        },
+        {
+          label: 'Median first response',
+          value: d.medianResponseMinutes === null ? '—' : formatDuration(d.medianResponseMinutes),
+          href: '/admin/leads',
+          icon: Timer,
+          hint: `Last 30 days. Target: ${formatDuration(d.responseTargetMinutes)}`,
+        },
+        {
+          label: 'Deals won',
+          value: d.dealsWon,
+          href: '/admin/leads?status=WON',
+          icon: Trophy,
+          hint:
+            d.winRatePercent === null
+              ? 'Last 30 days'
+              : `Last 30 days. About ${d.winRatePercent}% of new enquiries`,
+        },
+        {
+          label: 'Rent won (per month)',
+          value: formatINRCompact(d.wonRentMonthly),
+          href: '/admin/leads?status=WON',
+          icon: IndianRupee,
+          hint: 'Sum of agreed monthly rents, last 30 days',
+        },
+        {
+          label: 'Sales won',
+          value: formatINRCompact(d.wonSaleValue),
+          href: '/admin/leads?status=WON',
+          icon: IndianRupee,
+          hint: 'Sum of agreed sale prices, last 30 days',
+        },
         { label: 'Leads today', value: d.leadsToday, href: '/admin/leads', icon: Sun },
         { label: 'All leads', value: d.leadsTotal, href: '/admin/leads', icon: Users },
         ...(d.publishedListings !== null
@@ -58,7 +98,7 @@ export function DashboardView() {
                       <span className="text-sm font-medium">{t.label}</span>
                       <t.icon className="h-5 w-5" />
                     </div>
-                    <p className="mt-2 text-3xl font-bold tabular-nums text-ink">{t.value?.toLocaleString('en-IN')}</p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums text-ink">{typeof t.value === 'number' ? t.value.toLocaleString('en-IN') : t.value}</p>
                     {t.hint && <p className="mt-1 text-xs text-ink-subtle">{t.hint}</p>}
                   </Card>
                 </Link>

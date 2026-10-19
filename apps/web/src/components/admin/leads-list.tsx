@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { DataTable } from '@/components/admin/data-table';
+import { ResponseBadge } from '@/components/admin/response-badge';
 import { Select } from '@/components/ui/form-controls';
 import { Pagination } from '@/components/ui/pagination';
 import { LeadStatusBadge } from '@/components/ui/status-badge';
@@ -26,11 +27,18 @@ export function LeadsList() {
   const { get, set, page } = useUrlParams();
   const status = get('status');
   const mine = get('assigned') === 'me';
+  const overdue = get('overdue') === 'true';
 
   const query = useQuery({
-    queryKey: ['admin', 'leads', { status, mine, page, me: me?.id }],
+    queryKey: ['admin', 'leads', { status, mine, overdue, page, me: me?.id }],
     queryFn: () =>
-      adminLeadsApi.list({ status, assignedTo: mine ? me?.id : undefined, page, pageSize: PAGE_SIZE }),
+      adminLeadsApi.list({
+        status,
+        assignedTo: mine ? me?.id : undefined,
+        overdue: overdue ? 'true' : undefined,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
     enabled: !mine || !!me,
     placeholderData: (prev) => prev,
   });
@@ -55,6 +63,7 @@ export function LeadsList() {
           l.listing ? <span className="line-clamp-1 max-w-xs">{l.listing.title}</span> : <span className="text-ink-subtle">—</span>,
       },
       { header: 'Status', cell: ({ row }) => <LeadStatusBadge status={row.original.status} /> },
+      { header: 'Response', cell: ({ row }) => <ResponseBadge lead={row.original} /> },
       {
         header: 'Assigned to',
         cell: ({ row: { original: l } }) => l.assignee?.name ?? <span className="text-ink-subtle">Unassigned</span>,
@@ -64,7 +73,7 @@ export function LeadsList() {
   );
 
   const meta = query.data?.meta;
-  const filtered = !!(status || mine);
+  const filtered = !!(status || mine || overdue);
 
   return (
     <>
@@ -84,6 +93,15 @@ export function LeadsList() {
             ))}
           </Select>
         </div>
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-brand-600"
+            checked={overdue}
+            onChange={(e) => set({ overdue: e.target.checked ? 'true' : null })}
+          />
+          Overdue only
+        </label>
         {isAdmin(me) && (
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input

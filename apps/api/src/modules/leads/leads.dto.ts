@@ -31,11 +31,23 @@ export const createLeadSchema = z
 export const adminLeadListQuerySchema = paginationQuerySchema.extend({
   status: leadStatus.optional(),
   assignedTo: z.string().uuid().optional(),
+  /** "true" limits the list to leads still waiting past the response target. */
+  overdue: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => v === 'true'),
 });
 
 export const patchLeadSchema = z.object({
   status: leadStatus.optional(),
   assignedToUserId: z.string().uuid().nullable().optional(),
+  /** Deal value in whole INR: monthly rent for a rental, sale price for a purchase. Only for won leads. */
+  closedAmount: z.number().int().positive().max(100_000_000_000).optional(),
+  /** Day the deal closed, YYYY-MM-DD. Defaults to today. */
+  closedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD')
+    .optional(),
 });
 
 export class CreateLeadDto extends createZodDto(createLeadSchema) {}

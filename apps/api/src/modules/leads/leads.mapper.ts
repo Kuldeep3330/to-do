@@ -1,3 +1,5 @@
+import { ResponseInfo, responseInfo } from './leads.sla';
+
 type ListingBits = {
   id: string;
   slug: string;
@@ -23,6 +25,9 @@ export type LeadRow = {
   message: string | null;
   status: string;
   source: string;
+  firstResponseAt?: Date | null;
+  closedAmount?: bigint | null;
+  closedOn?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   listing?: ListingBits | null;
@@ -42,7 +47,11 @@ export type CustomerLead = {
   listing: { id: string; slug: string; title: string; intent: string } | null;
 };
 
-export type AdminLeadDetail = {
+export type AdminLeadDetail = ResponseInfo & {
+  /** Deal value in INR (monthly rent for rentals); only set on won leads. */
+  closedAmount: number | null;
+  /** Day the deal closed, YYYY-MM-DD. */
+  closedOn: string | null;
   id: string;
   listingId: string | null;
   userId: string | null;
@@ -79,8 +88,11 @@ export function toCustomerLead(row: LeadRow): CustomerLead {
   };
 }
 
-export function toAdminLead(row: LeadRow): AdminLeadDetail {
+export function toAdminLead(row: LeadRow, now = new Date()): AdminLeadDetail {
   return {
+    ...responseInfo(row, now),
+    closedAmount: row.closedAmount == null ? null : Number(row.closedAmount),
+    closedOn: row.closedOn ? row.closedOn.toISOString().slice(0, 10) : null,
     id: row.id,
     listingId: row.listingId,
     userId: row.userId,

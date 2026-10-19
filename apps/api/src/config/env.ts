@@ -45,6 +45,8 @@ const envSchema = z
     BOOTSTRAP_ADMIN_NAME: z.string().optional().default('Bootstrap Admin'),
     // Published listings not confirmed within this many days are paused. 0 disables the job.
     LISTING_STALE_DAYS: z.coerce.number().int().min(0).default(15),
+    // Target time to first response on a new lead. Leads still NEW after this are shown as overdue.
+    LEAD_RESPONSE_SLA_MINUTES: z.coerce.number().int().min(1).default(120),
     API_PORT: z.coerce.number().int().positive().default(3001),
     CORS_ORIGIN: z.string().optional().default(''),
   })
