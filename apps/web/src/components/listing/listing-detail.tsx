@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { ChevronRight, MapPin } from 'lucide-react';
 import { EnquiryPanel } from '@/components/listing/enquiry-panel';
+import { AmenityList } from '@/components/listing/amenity-list';
 import { ListingGallery } from '@/components/listing/listing-gallery';
 import { SaveButton } from '@/components/listing/save-button';
 import { TrustNote, VerifiedBadge } from '@/components/listing/trust';
@@ -164,6 +165,8 @@ export async function ListingDetail({ intent, params }: { intent: Intent; params
               </dl>
             </section>
           )}
+
+          <AmenityList amenities={l.amenities} />
 
           {l.description && (
             <section aria-labelledby="about-heading">

@@ -176,7 +176,7 @@ Weeks 1–8 of the original plan are built (see `docs/27-project-status.md`). Be
 | 3 | Visit booking (customer request, staff confirm slot) | Done |
 | 4 | Lead response timer (2-hour target) | Done |
 | 5 | Deal tracking on WON leads | Done |
-| 6 | Amenities on listing detail | Planned |
+| 6 | Amenities on listing detail | Done |
 | 7 | Locality landing pages | Planned |
 
 Visit requests and locality pages were killable in section 1; the pilot promotes them because the positioning depends on them.

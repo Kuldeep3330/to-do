@@ -23,6 +23,8 @@ type PropertyRow = {
   furnishing: string | null;
   facing: string | null;
   locality: LocalityCity;
+  /** Only loaded for the public detail query. */
+  amenities?: Array<{ amenity: { code: string; name: string } }>;
 };
 
 export type ListingRow = {
@@ -231,6 +233,8 @@ export type PublicListingDetail = {
   verifiedAt: string | null;
   verifiedByFirstName: string | null;
   lastConfirmedAt: string | null;
+  /** Active amenities of the property, alphabetical. */
+  amenities: Array<{ code: string; name: string }>;
 };
 
 export function toPublicListingDetail(row: ListingRow): PublicListingDetail {
@@ -266,5 +270,8 @@ export function toPublicListingDetail(row: ListingRow): PublicListingDetail {
     verifiedAt: iso(row.verifiedAt),
     verifiedByFirstName: row.verifiedAt ? firstName(row.verifiedBy?.name) : null,
     lastConfirmedAt: iso(row.lastConfirmedAt),
+    amenities: (row.property.amenities ?? [])
+      .map((a) => ({ code: a.amenity.code, name: a.amenity.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
   };
 }

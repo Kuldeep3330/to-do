@@ -142,7 +142,7 @@ Prefix `/api/v1`. Validation is Zod DTOs (also the source of truth for the web f
 
 From doc 26, still open:
 
-1. **Amenities are missing on the public listing detail.** The public listing API does not return them yet, so the page cannot show them.
+1. ~~**Amenities are missing on the public listing detail.**~~ Fixed 2026-10-19: the public detail API returns the property's active amenities and the page shows them (see doc 28 section 8e).
 2. **CSP allows `'unsafe-inline'` scripts** because Next.js needs it without per-request nonces. Moving to nonces is the next hardening step.
 3. **Password reset has not been exercised end to end against real SMTP.** Locally, mail is logged or captured by Mailpit.
 4. **One React hydration warning (#418)** was seen once on a cold server start and could not be reproduced in 40+ page loads.

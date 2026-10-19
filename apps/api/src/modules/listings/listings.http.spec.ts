@@ -668,4 +668,51 @@ describe('admin listings HTTP', () => {
       expect((await request(app.getHttpServer()).get(`/api/v1/listings/${stale.slug}`)).status).toBe(404);
     });
   });
+
+  describe('public amenities', () => {
+    async function publish(amenityIds: string[]) {
+      const propertyId = await createProperty({ amenityIds });
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/admin/listings')
+        .set('Cookie', adminCookie)
+        .send(listingBody(propertyId));
+      const id = created.body.data.id as string;
+      await insertOriginal(id);
+      await request(app.getHttpServer()).post(`/api/v1/admin/listings/${id}/publish`).set('Cookie', adminCookie);
+      return { id, slug: created.body.data.slug as string };
+    }
+
+    it('returns the property amenities alphabetically on the detail page only', async () => {
+      const amenities = await prisma.amenity.findMany({ where: { isActive: true }, take: 3, orderBy: { name: 'desc' } });
+      expect(amenities.length).toBeGreaterThanOrEqual(2);
+      const { slug } = await publish(amenities.map((a) => a.id));
+
+      const detail = await request(app.getHttpServer()).get(`/api/v1/listings/${slug}`);
+      expect(detail.status).toBe(200);
+      const names = detail.body.data.amenities.map((a: { name: string }) => a.name);
+      expect(names).toEqual([...amenities.map((a) => a.name)].sort((a, b) => a.localeCompare(b)));
+      expect(detail.body.data.amenities[0]).toEqual({ code: expect.any(String), name: expect.any(String) });
+
+      const search = await request(app.getHttpServer()).get('/api/v1/listings?pageSize=24');
+      expect(search.status).toBe(200);
+      for (const card of search.body.data) {
+        expect(card).not.toHaveProperty('amenities');
+      }
+    });
+
+    it('returns an empty list when the property has none, and hides deactivated amenities', async () => {
+      const none = await publish([]);
+      expect((await request(app.getHttpServer()).get(`/api/v1/listings/${none.slug}`)).body.data.amenities).toEqual([]);
+
+      const [keep, drop] = await prisma.amenity.findMany({ where: { isActive: true }, take: 2 });
+      const both = await publish([keep.id, drop.id]);
+      await prisma.amenity.update({ where: { id: drop.id }, data: { isActive: false } });
+      try {
+        const res = await request(app.getHttpServer()).get(`/api/v1/listings/${both.slug}`);
+        expect(res.body.data.amenities.map((a: { code: string }) => a.code)).toEqual([keep.code]);
+      } finally {
+        await prisma.amenity.update({ where: { id: drop.id }, data: { isActive: true } });
+      }
+    });
+  });
 });

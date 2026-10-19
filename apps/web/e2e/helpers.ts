@@ -54,6 +54,8 @@ type SeedOptions = {
   photos?: number;
   publish?: boolean;
   description?: string;
+  /** Amenity codes to attach to the property, e.g. ['gym', 'lift']. */
+  amenities?: string[];
 };
 
 /** Create property + listing (+ photos, + publish) through the admin API. Needs an admin-authenticated request context. */
@@ -70,8 +72,19 @@ export async function seedListing(request: APIRequestContext, o: SeedOptions) {
   const loc = locs.find((l) => l.slug === localitySlug);
   if (!loc) throw new Error(`unknown locality ${localitySlug}`);
 
+  let amenityIds: string[] | undefined;
+  if (o.amenities?.length) {
+    const all = (await (await request.get('/api/v1/admin/amenities')).json()).data as { id: string; code: string }[];
+    amenityIds = o.amenities.map((code) => {
+      const found = all.find((a) => a.code === code);
+      if (!found) throw new Error(`unknown amenity ${code}`);
+      return found.id;
+    });
+  }
+
   const prop = await request.post('/api/v1/admin/properties', {
     data: {
+      ...(amenityIds ? { amenityIds } : {}),
       type: o.type ?? 'RESIDENTIAL',
       cityId: city.id,
       localityId: loc.id,

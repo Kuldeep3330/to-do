@@ -28,7 +28,7 @@ Doc 08 describes the *intended* frontend architecture. This document turns it in
 
 **Known gaps / follow-ups**
 
-- The public listing API does not return amenities, so the detail page cannot show them yet.
+- ~~The public listing API does not return amenities, so the detail page cannot show them yet.~~ Fixed 2026-10-19 (doc 28 section 8e).
 - CSP allows inline scripts (`'unsafe-inline'`), which Next.js needs without per-request nonces. Moving to nonces is the next hardening step.
 - Password reset needs SMTP to be exercised end to end; locally, emails are logged or captured by Mailpit.
 - One React hydration warning (#418) was seen once on a cold server start and could not be reproduced in 40+ page loads.

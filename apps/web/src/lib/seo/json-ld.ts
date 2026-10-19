@@ -29,6 +29,10 @@ export function listingJsonLd(l: PublicListingDetail) {
       '@type': 'Residence',
       numberOfRooms: l.bedrooms ?? undefined,
       numberOfBathroomsTotal: l.bathrooms ?? undefined,
+      amenityFeature:
+        l.amenities.length > 0
+          ? l.amenities.map((a) => ({ '@type': 'LocationFeatureSpecification', name: a.name, value: true }))
+          : undefined,
       floorSize: l.areaValue
         ? { '@type': 'QuantitativeValue', value: l.areaValue, unitCode: l.areaUnit === 'SQFT' ? 'FTK' : undefined }
         : undefined,

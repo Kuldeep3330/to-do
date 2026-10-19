@@ -64,6 +64,8 @@ export type PublicListingDetail = Omit<PublicListingCard, 'bedrooms' | 'furnishi
   furnishing: Furnishing | null;
   facing: string | null;
   gallery: string[];
+  /** Active amenities of the property, alphabetical. */
+  amenities: Omit<Amenity, 'id'>[];
   verifiedByFirstName: string | null;
 };
 

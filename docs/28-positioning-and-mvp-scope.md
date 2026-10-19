@@ -65,7 +65,7 @@ Ordered by value for effort. Items 1 and 2 are built.
 | 3 | **Visit booking**: signed-in customer requests a visit, staff confirm a slot, customer can follow and cancel | Done 2026-10-18 |
 | 4 | **Lead response timer**: overdue highlighting in the inbox against the 2-hour target | Done 2026-10-19 |
 | 5 | **Deal tracking**: closed price and date when a lead becomes WON, so revenue and conversion can be measured | Done 2026-10-19 |
-| 6 | **Amenities on listing detail** (known gap from doc 26) | Planned |
+| 6 | **Amenities on listing detail** (known gap from doc 26) | Done 2026-10-19 |
 | 7 | **Locality landing pages** for search traffic | Planned |
 
 **Out of scope until a deal has closed:** payments, owner self-posting, broker marketplace, maps, native apps.
@@ -129,6 +129,14 @@ Track from the first week of the pilot:
 - **API:** `PATCH /admin/leads/:id` accepts `closedAmount` and `closedOn`; lead payloads return them; dashboard adds `dealsWon`, `winRatePercent`, `wonRentMonthly`, `wonSaleValue`. Migration `20261019130000_lead_deal_tracking` adds `closed_amount` (must be positive) and `closed_on`.
 - **Legacy data:** leads that were already Won before this change have no recorded value. They show "Not recorded" with an "Add deal details" button, and are left out of the money totals.
 - **Not included yet:** the fee your team earns on each deal (the money model is still undecided, see section 6), per-agent deal reports, and exporting deals for invoicing. Once a fee is chosen, it can be computed from these fields.
+
+## 8e. Implementation notes for item 6 (amenities on listing detail)
+
+- **API:** the public listing detail (`GET /api/v1/listings/:slug`) now returns `amenities: [{ code, name }]`, alphabetical, only for amenities that are still active. List and search results deliberately do **not** include them, to keep the cards fast.
+- **Page:** an Amenities section with an icon per amenity (a check mark for any new code without its own icon). When a property has none, the section is not shown at all, so there is no empty heading.
+- **SEO:** each amenity is also added to the page's structured data as an `amenityFeature`.
+- **Content:** amenities come from the property in the admin form; nothing new to enter. Listings whose property has no amenities selected will show no section, so field staff should fill this in during the visit.
+- **Not included yet:** filtering search by amenity.
 
 ## 9. Open questions for the owner
 

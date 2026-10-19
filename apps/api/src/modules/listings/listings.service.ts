@@ -51,6 +51,20 @@ export const PUBLIC_INCLUDE = {
   },
 } as const;
 
+/** Detail pages also need the property's amenities; list and search cards do not, so they skip the join. */
+const PUBLIC_DETAIL_INCLUDE = {
+  ...PUBLIC_INCLUDE,
+  property: {
+    include: {
+      locality: { include: { city: true } },
+      amenities: {
+        where: { amenity: { isActive: true } },
+        select: { amenity: { select: { code: true, name: true } } },
+      },
+    },
+  },
+} as const;
+
 @Injectable()
 export class ListingsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -144,7 +158,7 @@ export class ListingsService {
         deletedAt: null,
         property: { deletedAt: null },
       },
-      include: PUBLIC_INCLUDE,
+      include: PUBLIC_DETAIL_INCLUDE,
     });
     if (!row) {
       throw AppError.notFound('Listing not found');
