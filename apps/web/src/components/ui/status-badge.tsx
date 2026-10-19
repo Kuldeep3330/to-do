@@ -1,6 +1,18 @@
 import { Badge } from './feedback';
 import { humanize } from '@/lib/format';
-import type { LeadStatus, ListingStatus } from '@/lib/api/types';
+import type { LeadStatus, ListingStatus, VisitStatus } from '@/lib/api/types';
+
+const visitTone: Record<VisitStatus, 'neutral' | 'brand' | 'success' | 'warning' | 'danger'> = {
+  REQUESTED: 'warning',
+  CONFIRMED: 'brand',
+  COMPLETED: 'success',
+  NO_SHOW: 'danger',
+  CANCELLED: 'neutral',
+};
+
+export function VisitStatusBadge({ status }: { status: VisitStatus }) {
+  return <Badge tone={visitTone[status]}>{humanize(status)}</Badge>;
+}
 
 const listingTone: Record<ListingStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
   DRAFT: 'neutral',

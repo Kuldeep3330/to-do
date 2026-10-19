@@ -74,6 +74,9 @@ const listing = (over: Partial<AdminListing> = {}): AdminListing => ({
   availableFrom: '2026-12-01',
   publishedAt: null,
   closedAt: null,
+  verifiedAt: null,
+  verifiedBy: null,
+  lastConfirmedAt: null,
   originalCount: 2,
   property: {
     id: uuid,

@@ -44,6 +44,8 @@ export type PublicListingCard = {
   locality: NamedRef;
   coverImageUrl: string | null;
   publishedAt: string | null;
+  verifiedAt: string | null;
+  lastConfirmedAt: string | null;
 };
 
 export type PublicListingDetail = Omit<PublicListingCard, 'bedrooms' | 'furnishing'> & {
@@ -62,6 +64,7 @@ export type PublicListingDetail = Omit<PublicListingCard, 'bedrooms' | 'furnishi
   furnishing: Furnishing | null;
   facing: string | null;
   gallery: string[];
+  verifiedByFirstName: string | null;
 };
 
 export type AdminListing = {
@@ -80,6 +83,9 @@ export type AdminListing = {
   availableFrom: string | null;
   publishedAt: string | null;
   closedAt: string | null;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  lastConfirmedAt: string | null;
   originalCount: number;
   property: {
     id: string;
@@ -136,6 +142,26 @@ export type AdminMedia = {
   sortOrder: number;
   variant: 'ORIGINAL' | 'CARD' | 'DETAIL';
   createdAt: string;
+};
+
+export type VisitStatus = 'REQUESTED' | 'CONFIRMED' | 'COMPLETED' | 'NO_SHOW' | 'CANCELLED';
+export type VisitSlot = 'ANY' | 'MORNING' | 'AFTERNOON' | 'EVENING';
+
+export type CustomerVisit = {
+  id: string;
+  leadId: string;
+  status: VisitStatus;
+  /** Calendar date, YYYY-MM-DD. */
+  preferredDate: string | null;
+  preferredSlot: VisitSlot;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  listing: { id: string; slug: string; title: string; intent: Intent };
+};
+
+export type AdminVisit = CustomerVisit & {
+  lead: { id: string; name: string; phone: string; assignee: { id: string; name: string } | null } | null;
 };
 
 export type CustomerLead = {

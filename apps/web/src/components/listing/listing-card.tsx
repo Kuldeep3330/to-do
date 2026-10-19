@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { BedDouble, ImageOff, MapPin, Maximize2, Sofa } from 'lucide-react';
 import { SaveButton } from '@/components/listing/save-button';
+import { VerifiedBadge } from '@/components/listing/trust';
 import { Badge } from '@/components/ui/feedback';
 import type { PublicListingCard } from '@/lib/api/types';
 import { formatArea, formatBedrooms, formatPrice, humanize } from '@/lib/format';
@@ -35,6 +36,7 @@ export function ListingCard({ listing, priority = false }: { listing: PublicList
           <Badge tone="brand" className="absolute left-3 top-3 bg-surface/95 shadow-card">
             {listing.intent === 'RENT' ? 'For rent' : 'For sale'}
           </Badge>
+          <VerifiedBadge verifiedAt={listing.verifiedAt} className="absolute bottom-3 left-3 bg-surface/95 shadow-card" />
         </div>
         <div className="space-y-2 p-4">
           <p className="text-xl font-bold text-ink">{formatPrice(listing.priceAmount, listing.pricePeriod)}</p>

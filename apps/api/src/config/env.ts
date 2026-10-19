@@ -43,6 +43,8 @@ const envSchema = z
     BOOTSTRAP_ADMIN_PASSWORD: z.string().optional().default(''),
     BOOTSTRAP_ADMIN_PHONE: z.string().optional().default(''),
     BOOTSTRAP_ADMIN_NAME: z.string().optional().default('Bootstrap Admin'),
+    // Published listings not confirmed within this many days are paused. 0 disables the job.
+    LISTING_STALE_DAYS: z.coerce.number().int().min(0).default(15),
     API_PORT: z.coerce.number().int().positive().default(3001),
     CORS_ORIGIN: z.string().optional().default(''),
   })

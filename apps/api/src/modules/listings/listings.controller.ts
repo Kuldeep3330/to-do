@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Header, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { Audit } from '../../common/decorators/audit.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -50,6 +51,22 @@ export class AdminListingsController {
   @Audit('PUBLISH_LISTING', 'listing')
   async publish(@Param('id') id: string) {
     return { data: await this.listings.publish(requireUuid(id)) };
+  }
+
+  @RequirePermissions('listing.manage')
+  @Post(':id/verify')
+  @HttpCode(200)
+  @Audit('VERIFY_LISTING', 'listing')
+  async verify(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return { data: await this.listings.verify(requireUuid(id), user.id) };
+  }
+
+  @RequirePermissions('listing.manage')
+  @Post(':id/confirm')
+  @HttpCode(200)
+  @Audit('CONFIRM_LISTING', 'listing')
+  async confirm(@Param('id') id: string) {
+    return { data: await this.listings.confirm(requireUuid(id)) };
   }
 
   @RequirePermissions('listing.manage')

@@ -41,6 +41,9 @@ export type ListingRow = {
   availableFrom: Date | null;
   publishedAt: Date | null;
   closedAt: Date | null;
+  verifiedAt?: Date | null;
+  lastConfirmedAt?: Date | null;
+  verifiedBy?: { name: string } | null;
   createdAt: Date;
   updatedAt: Date;
   property: PropertyRow;
@@ -56,6 +59,16 @@ function num(value: unknown): number | null {
     return null;
   }
   return Number(value);
+}
+
+function iso(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+/** Public label only: first name, never a full name. */
+function firstName(name: string | undefined): string | null {
+  const first = name?.trim().split(/\s+/)[0];
+  return first || null;
 }
 
 function dateOnly(value: Date | null): string | null {
@@ -78,6 +91,9 @@ export type AdminListing = {
   availableFrom: string | null;
   publishedAt: string | null;
   closedAt: string | null;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  lastConfirmedAt: string | null;
   originalCount: number;
   property: {
     id: string;
@@ -112,6 +128,9 @@ export function toAdminListing(row: ListingRow): AdminListing {
     availableFrom: dateOnly(row.availableFrom),
     publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
     closedAt: row.closedAt ? row.closedAt.toISOString() : null,
+    verifiedAt: iso(row.verifiedAt),
+    verifiedBy: row.verifiedBy?.name ?? null,
+    lastConfirmedAt: iso(row.lastConfirmedAt),
     originalCount: row.media?.length ?? 0,
     property: {
       id: row.property.id,
@@ -154,6 +173,8 @@ export type PublicListingCard = {
   locality: { name: string; slug: string };
   coverImageUrl: string | null;
   publishedAt: string | null;
+  verifiedAt: string | null;
+  lastConfirmedAt: string | null;
 };
 
 export function toPublicListingCard(row: ListingRow): PublicListingCard {
@@ -173,6 +194,8 @@ export function toPublicListingCard(row: ListingRow): PublicListingCard {
     locality: { name: row.property.locality.name, slug: row.property.locality.slug },
     coverImageUrl: coverUrl((row.media ?? []) as MediaRow[]),
     publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
+    verifiedAt: iso(row.verifiedAt),
+    lastConfirmedAt: iso(row.lastConfirmedAt),
   };
 }
 
@@ -205,6 +228,9 @@ export type PublicListingDetail = {
   facing: string | null;
   coverImageUrl: string | null;
   gallery: string[];
+  verifiedAt: string | null;
+  verifiedByFirstName: string | null;
+  lastConfirmedAt: string | null;
 };
 
 export function toPublicListingDetail(row: ListingRow): PublicListingDetail {
@@ -237,5 +263,8 @@ export function toPublicListingDetail(row: ListingRow): PublicListingDetail {
     facing: row.property.facing,
     coverImageUrl: coverUrl((row.media ?? []) as MediaRow[]),
     gallery: galleryUrls((row.media ?? []) as MediaRow[]),
+    verifiedAt: iso(row.verifiedAt),
+    verifiedByFirstName: row.verifiedAt ? firstName(row.verifiedBy?.name) : null,
+    lastConfirmedAt: iso(row.lastConfirmedAt),
   };
 }

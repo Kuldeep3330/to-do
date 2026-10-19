@@ -5,6 +5,7 @@ import { ChevronRight, MapPin } from 'lucide-react';
 import { EnquiryPanel } from '@/components/listing/enquiry-panel';
 import { ListingGallery } from '@/components/listing/listing-gallery';
 import { SaveButton } from '@/components/listing/save-button';
+import { TrustNote, VerifiedBadge } from '@/components/listing/trust';
 import { Badge } from '@/components/ui/feedback';
 import { ApiError } from '@/lib/api/errors';
 import { publicData } from '@/lib/api/public';
@@ -115,6 +116,7 @@ export async function ListingDetail({ intent, params }: { intent: Intent; params
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="brand">{l.intent === 'RENT' ? 'For rent' : 'For sale'}</Badge>
               {l.negotiable && <Badge tone="success">Negotiable</Badge>}
+              <VerifiedBadge verifiedAt={l.verifiedAt} />
               <SaveButton listingId={l.id} title={l.title} variant="inline" className="ml-auto" />
             </div>
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{l.title}</h1>
@@ -123,6 +125,11 @@ export async function ListingDetail({ intent, params }: { intent: Intent; params
               {l.societyName ? `${l.societyName}, ` : ''}
               {l.locality.name}, {l.city.name}
             </p>
+            <TrustNote
+              verifiedAt={l.verifiedAt}
+              verifiedByFirstName={l.verifiedByFirstName}
+              lastConfirmedAt={l.lastConfirmedAt}
+            />
             <p className="mt-4 text-3xl font-bold text-ink">{price}</p>
             {(l.maintenanceAmount || l.depositAmount) && (
               <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-muted">
@@ -170,7 +177,7 @@ export async function ListingDetail({ intent, params }: { intent: Intent; params
         </div>
 
         <aside aria-label="Enquiry">
-          <EnquiryPanel listingSlug={l.slug} listingTitle={l.title} priceLabel={price} />
+          <EnquiryPanel listingId={l.id} listingSlug={l.slug} listingTitle={l.title} priceLabel={price} />
         </aside>
       </div>
     </div>

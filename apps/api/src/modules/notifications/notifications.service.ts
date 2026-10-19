@@ -11,6 +11,15 @@ export type LeadCreatedNotice = {
   listingSlug: string;
 };
 
+export type VisitRequestedNotice = {
+  name: string;
+  phone: string;
+  listingTitle: string;
+  listingSlug: string;
+  preferredDate: string | null;
+  preferredSlot: string;
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -47,6 +56,17 @@ export class NotificationsService {
         html: `<p>Hi ${escapeHtml(notice.name)}, we received your enquiry for ${escapeHtml(notice.listingTitle)}.</p>`,
       });
     }
+  }
+
+  async notifyVisitRequested(notice: VisitRequestedNotice): Promise<void> {
+    const when = `${notice.preferredDate ?? 'any day'} (${notice.preferredSlot.toLowerCase()})`;
+    await this.sendTemplate({
+      template: 'visit_requested_ops',
+      to: env().OPS_INBOX_EMAIL,
+      subject: `Visit requested: ${notice.listingTitle}`,
+      text: `${notice.name} ${maskPhone(notice.phone)} wants to visit ${notice.listingSlug} on ${when}`,
+      html: `<p>${escapeHtml(notice.name)} wants to visit ${escapeHtml(notice.listingSlug)} on ${escapeHtml(when)}</p>`,
+    });
   }
 
   private async sendTemplate(input: {

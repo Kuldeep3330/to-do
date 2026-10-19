@@ -150,13 +150,14 @@ model User {
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt        DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  roles          UserRole[]
-  refreshTokens  RefreshToken[]
-  passwordResets PasswordResetToken[]
-  leads          Lead[]               @relation("LeadCustomer")
-  assignedLeads  Lead[]               @relation("LeadAssignee")
-  savedListings  SavedListing[]
-  auditLogs      AuditLog[]
+  roles            UserRole[]
+  refreshTokens    RefreshToken[]
+  passwordResets   PasswordResetToken[]
+  leads            Lead[]               @relation("LeadCustomer")
+  assignedLeads    Lead[]               @relation("LeadAssignee")
+  verifiedListings Listing[]            @relation("ListingVerifier")
+  savedListings    SavedListing[]
+  auditLogs        AuditLog[]
 
   @@map("users")
 }
@@ -328,17 +329,22 @@ model Listing {
   availableFrom     DateTime?     @map("available_from") @db.Date
   publishedAt       DateTime?     @map("published_at") @db.Timestamptz(6)
   closedAt          DateTime?     @map("closed_at") @db.Timestamptz(6)
+  verifiedAt        DateTime?     @map("verified_at") @db.Timestamptz(6)
+  verifiedByUserId  String?       @map("verified_by_user_id") @db.Uuid
+  lastConfirmedAt   DateTime?     @map("last_confirmed_at") @db.Timestamptz(6)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
-  property Property       @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  media    Media[]
-  leads    Lead[]
-  visits   Visit[]
-  savedBy  SavedListing[]
+  property   Property       @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  verifiedBy User?          @relation("ListingVerifier", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+  media      Media[]
+  leads      Lead[]
+  visits     Visit[]
+  savedBy    SavedListing[]
 
   @@index([propertyId])
+  @@index([status, lastConfirmedAt])
   @@map("listings")
 }
 

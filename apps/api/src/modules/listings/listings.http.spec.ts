@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AppModule } from '../../app.module';
+import { ListingsService } from './listings.service';
 
 const prisma = new PrismaClient();
 
@@ -592,5 +593,79 @@ describe('admin listings HTTP', () => {
     const res = await request(app.getHttpServer()).get(`/api/v1/listings/${slug}`);
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+  describe('verification and freshness', () => {
+    async function publishedListing() {
+      const propertyId = await createProperty();
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/admin/listings')
+        .set('Cookie', adminCookie)
+        .send(listingBody(propertyId));
+      const id = created.body.data.id as string;
+      await insertOriginal(id);
+      await request(app.getHttpServer()).post(`/api/v1/admin/listings/${id}/publish`).set('Cookie', adminCookie);
+      return { id, slug: created.body.data.slug as string };
+    }
+
+    it('publishing sets lastConfirmedAt and the listing starts unverified', async () => {
+      const { id, slug } = await publishedListing();
+      const res = await request(app.getHttpServer()).get(`/api/v1/listings/${slug}`);
+      expect(res.status).toBe(200);
+      expect(res.body.data.verifiedAt).toBeNull();
+      expect(res.body.data.verifiedByFirstName).toBeNull();
+      expect(res.body.data.lastConfirmedAt).toBeTruthy();
+      expect(id).toBeTruthy();
+    });
+
+    it('verify marks the listing, exposes only the first name publicly, and is staff only', async () => {
+      const { id, slug } = await publishedListing();
+      const denied = await request(app.getHttpServer())
+        .post(`/api/v1/admin/listings/${id}/verify`)
+        .set('Cookie', customerCookie);
+      expect(denied.status).toBe(403);
+
+      const ok = await request(app.getHttpServer())
+        .post(`/api/v1/admin/listings/${id}/verify`)
+        .set('Cookie', adminCookie);
+      expect(ok.status).toBe(200);
+      expect(ok.body.data.verifiedAt).toBeTruthy();
+      expect(ok.body.data.verifiedBy).toBeTruthy();
+
+      const pub = await request(app.getHttpServer()).get(`/api/v1/listings/${slug}`);
+      expect(pub.body.data.verifiedAt).toBeTruthy();
+      expect(pub.body.data.verifiedByFirstName).not.toMatch(/\s/);
+      expect(JSON.stringify(pub.body)).not.toContain('verifiedBy"');
+    });
+
+    it('confirm resets the freshness clock and rejects closed listings', async () => {
+      const { id } = await publishedListing();
+      await prisma.listing.update({ where: { id }, data: { lastConfirmedAt: new Date('2020-01-01') } });
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/admin/listings/${id}/confirm`)
+        .set('Cookie', adminCookie);
+      expect(res.status).toBe(200);
+      expect(new Date(res.body.data.lastConfirmedAt).getFullYear()).toBeGreaterThan(2020);
+
+      await request(app.getHttpServer()).post(`/api/v1/admin/listings/${id}/close`).set('Cookie', adminCookie);
+      const closed = await request(app.getHttpServer())
+        .post(`/api/v1/admin/listings/${id}/verify`)
+        .set('Cookie', adminCookie);
+      expect(closed.status).toBe(409);
+    });
+
+    it('pauseStale pauses only listings past the cutoff', async () => {
+      const stale = await publishedListing();
+      const fresh = await publishedListing();
+      await prisma.listing.update({
+        where: { id: stale.id },
+        data: { lastConfirmedAt: new Date(Date.now() - 30 * 86_400_000) },
+      });
+      const svc = app.get(ListingsService);
+      const count = await svc.pauseStale(15);
+      expect(count).toBeGreaterThanOrEqual(1);
+      expect((await prisma.listing.findUnique({ where: { id: stale.id } }))?.status).toBe('PAUSED');
+      expect((await prisma.listing.findUnique({ where: { id: fresh.id } }))?.status).toBe('PUBLISHED');
+      expect((await request(app.getHttpServer()).get(`/api/v1/listings/${stale.slug}`)).status).toBe(404);
+    });
   });
 });

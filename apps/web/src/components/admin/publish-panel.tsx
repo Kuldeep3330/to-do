@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2, Circle, ExternalLink } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, Circle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Alert, Card } from '@/components/ui/feedback';
@@ -11,6 +11,7 @@ import { ListingStatusBadge } from '@/components/ui/status-badge';
 import { useToast } from '@/components/ui/toast';
 import { adminListingsApi } from '@/lib/api/endpoints';
 import { errorDetailMessages, errorMessage } from '@/lib/api/errors';
+import { formatDate } from '@/lib/format';
 import type { AdminListing } from '@/lib/api/types';
 import { listingPath } from '@/lib/routes';
 import { publishChecklist } from '@/lib/schemas/listing';
@@ -59,6 +60,15 @@ export function PublishPanel({ listing, onChanged }: { listing: AdminListing; on
       setConfirming(null);
       setProblem({ message: errorMessage(e), details: errorDetailMessages(e) });
     },
+  });
+
+  const trust = useMutation({
+    mutationFn: (kind: 'verify' | 'confirm') => adminListingsApi[kind](listing.id),
+    onSuccess: async (_d, kind) => {
+      toast.success(kind === 'verify' ? 'Listing marked as verified' : 'Availability confirmed');
+      await onChanged();
+    },
+    onError: (e) => setProblem({ message: errorMessage(e), details: errorDetailMessages(e) }),
   });
 
   const { status } = listing;
@@ -114,6 +124,36 @@ export function PublishPanel({ listing, onChanged }: { listing: AdminListing; on
         </ul>
       )}
       {status === 'CLOSED' && <p className="mt-3 text-sm text-ink-muted">This listing is closed and read-only.</p>}
+
+      {status !== 'CLOSED' && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          <div className="space-y-0.5 text-sm text-ink-muted">
+            <p className="flex items-center gap-1.5">
+              <BadgeCheck
+                className={listing.verifiedAt ? 'h-4 w-4 text-success-600' : 'h-4 w-4 text-ink-subtle'}
+                aria-hidden
+              />
+              {listing.verifiedAt
+                ? `Verified on ${formatDate(listing.verifiedAt)}${listing.verifiedBy ? ` by ${listing.verifiedBy}` : ''}`
+                : 'Not verified yet. Verify after a physical visit.'}
+            </p>
+            <p>
+              Last confirmed: {listing.lastConfirmedAt ? formatDate(listing.lastConfirmedAt) : 'never'}. Published
+              listings not confirmed within the freshness window are paused automatically.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => trust.mutate('verify')} disabled={trust.isPending}>
+              {listing.verifiedAt ? 'Re-verify' : 'Mark verified'}
+            </Button>
+            {status === 'PUBLISHED' && (
+              <Button variant="outline" onClick={() => trust.mutate('confirm')} disabled={trust.isPending}>
+                Confirm available
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {problem && (
         <Alert tone="error" className="mt-4" title={problem.message}>

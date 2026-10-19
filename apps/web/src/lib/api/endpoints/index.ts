@@ -10,7 +10,10 @@ import type {
   Amenity,
   City,
   DashboardCounts,
+  AdminVisit,
   CustomerLead,
+  CustomerVisit,
+  VisitSlot,
   LeadStatus,
   Locality,
   Paged,
@@ -39,6 +42,10 @@ export const meApi = {
   update: (body: { name?: string; phone?: string }) =>
     apiData<PublicUser>('/api/v1/me', { method: 'PATCH', body }),
   leads: (query?: Q) => api<Paged<CustomerLead>>('/api/v1/me/leads', { query }),
+  visits: (query?: Q) => api<Paged<CustomerVisit>>('/api/v1/me/visits', { query }),
+  requestVisit: (body: { listingId: string; preferredDate?: string; preferredSlot?: VisitSlot; notes?: string }) =>
+    apiData<CustomerVisit>('/api/v1/me/visits', { method: 'POST', body }),
+  cancelVisit: (id: string) => apiData<CustomerVisit>(`/api/v1/me/visits/${id}/cancel`, { method: 'POST' }),
 };
 
 /* ───────────── locations (Phase 2) ───────────── */
@@ -86,6 +93,8 @@ export const adminListingsApi = {
   publish: (id: string) =>
     apiData<AdminListing>(`/api/v1/admin/listings/${id}/publish`, { method: 'POST' }),
   pause: (id: string) => apiData<AdminListing>(`/api/v1/admin/listings/${id}/pause`, { method: 'POST' }),
+  verify: (id: string) => apiData<AdminListing>(`/api/v1/admin/listings/${id}/verify`, { method: 'POST' }),
+  confirm: (id: string) => apiData<AdminListing>(`/api/v1/admin/listings/${id}/confirm`, { method: 'POST' }),
   close: (id: string) => apiData<AdminListing>(`/api/v1/admin/listings/${id}/close`, { method: 'POST' }),
 };
 
@@ -106,6 +115,14 @@ export const adminLeadsApi = {
   get: (id: string) => apiData<AdminLead>(`/api/v1/admin/leads/${id}`),
   update: (id: string, body: { status?: LeadStatus; assignedToUserId?: string | null }) =>
     apiData<AdminLead>(`/api/v1/admin/leads/${id}`, { method: 'PATCH', body }),
+};
+
+export type VisitCommand = 'confirm' | 'complete' | 'no-show' | 'cancel';
+
+export const adminVisitsApi = {
+  list: (query?: Q) => api<Paged<AdminVisit>>('/api/v1/admin/visits', { query }),
+  act: (id: string, command: VisitCommand, body?: { preferredDate?: string; preferredSlot?: VisitSlot }) =>
+    apiData<AdminVisit>(`/api/v1/admin/visits/${id}/${command}`, { method: 'POST', body: body ?? {} }),
 };
 
 /* ───────────── public (client-side use only; RSC uses serverApi) ───────────── */

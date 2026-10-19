@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound, usePathname, useRouter } from 'next/navigation';
 import {
   Building2,
+  CalendarCheck,
   Home,
   Inbox,
   LayoutDashboard,
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
   { href: '/admin/properties', label: 'Properties', icon: Home, adminOnly: true },
   { href: '/admin/listings', label: 'Listings', icon: ListChecks, adminOnly: true },
   { href: '/admin/leads', label: 'Leads', icon: Inbox },
+  { href: '/admin/visits', label: 'Visits', icon: CalendarCheck },
   { href: '/admin/users', label: 'Staff', icon: Users, adminOnly: true },
 ];
 

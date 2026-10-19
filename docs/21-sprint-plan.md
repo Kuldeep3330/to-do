@@ -162,3 +162,21 @@ For each feature: confirm requirement → implement API → test API → impleme
 **Stop.** You review. Then Step 22 (implementation) only after D1–D17 (or at least D1, D2, D3, D8, D10, D12) are approved.
 
 If you say “implement”, Week 2 scaffolding starts — not before.
+
+---
+
+## 7. Pilot scope update (2026-10-18)
+
+Weeks 1–8 of the original plan are built (see `docs/27-project-status.md`). Before the launch path (week 9), the next work is the **trust-first pilot** defined in `docs/28-positioning-and-mvp-scope.md`:
+
+| # | Item | Status |
+| --- | --- | --- |
+| 1 | Verified badge (date and verifying agent) | Done |
+| 2 | Freshness: last-confirmed date, confirm action, auto-pause job | Done |
+| 3 | Visit booking (customer request, staff confirm slot) | Done |
+| 4 | Lead response timer (2-hour target) | Planned |
+| 5 | Deal tracking on WON leads | Planned |
+| 6 | Amenities on listing detail | Planned |
+| 7 | Locality landing pages | Planned |
+
+Visit requests and locality pages were killable in section 1; the pilot promotes them because the positioning depends on them.

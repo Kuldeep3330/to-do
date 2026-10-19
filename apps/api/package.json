@@ -13,6 +13,7 @@
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "prisma:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "prisma:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "prisma:seed:demo": "dotenv -e ../../.env -- tsx prisma/seed-demo.ts",
     "prisma:validate": "prisma validate && prisma format"
   },
   "prisma": {

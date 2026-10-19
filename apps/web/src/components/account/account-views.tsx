@@ -6,27 +6,29 @@ import { usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Heart, Inbox } from 'lucide-react';
+import { CalendarCheck, Heart, Inbox } from 'lucide-react';
 import { z } from 'zod';
 import { ListingGrid } from '@/components/listing/listing-card';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Alert, Card, EmptyState, ErrorState, Skeleton } from '@/components/ui/feedback';
 import { Field, Input, fieldAria } from '@/components/ui/form-controls';
-import { LeadStatusBadge } from '@/components/ui/status-badge';
+import { LeadStatusBadge, VisitStatusBadge } from '@/components/ui/status-badge';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/components/ui/toast';
 import { meApi, savedApi } from '@/lib/api/endpoints';
 import { errorMessage } from '@/lib/api/errors';
 import { ME_KEY, useMe } from '@/lib/auth/use-auth';
 import { applyApiError } from '@/lib/forms';
-import { formatDateTime, formatPhone } from '@/lib/format';
+import { formatDate, formatDateTime, formatPhone } from '@/lib/format';
 import { listingPath } from '@/lib/routes';
 import { phoneField } from '@/lib/schemas/auth';
+import { VISIT_SLOTS } from '@/lib/schemas/visit';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/account', label: 'Profile' },
   { href: '/account/enquiries', label: 'My enquiries' },
+  { href: '/account/visits', label: 'My visits' },
   { href: '/account/saved', label: 'Saved homes' },
 ];
 
@@ -192,6 +194,98 @@ export function EnquiriesView() {
         </ul>
       )}
       {q.data && <Pagination page={q.data.meta.page} pageSize={q.data.meta.pageSize} total={q.data.meta.total} onPageChange={setPage} />}
+    </div>
+  );
+}
+
+export function VisitsView() {
+  const [page, setPage] = React.useState(1);
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [cancelling, setCancelling] = React.useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ['me', 'visits', page],
+    queryFn: () => meApi.visits({ page, pageSize: 10 }),
+    placeholderData: (prev) => prev,
+  });
+
+  async function cancel(id: string) {
+    setCancelling(id);
+    try {
+      await meApi.cancelVisit(id);
+      toast.success('Visit request cancelled');
+      await qc.invalidateQueries({ queryKey: ['me', 'visits'] });
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setCancelling(null);
+    }
+  }
+
+  if (q.isError) return <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />;
+  if (q.isLoading)
+    return (
+      <div className="space-y-3" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-24 w-full" />
+        ))}
+      </div>
+    );
+  const rows = q.data?.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold tracking-tight">My visits</h1>
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={CalendarCheck}
+          title="No visits yet"
+          description="Found a home you like? Use Book a visit on its page and our team will arrange a time."
+          action={<ButtonLink href="/search">Browse homes</ButtonLink>}
+        />
+      ) : (
+        <ul className="space-y-3" aria-label="Visits">
+          {rows.map((v) => (
+            <li key={v.id}>
+              <Card className="p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <Link
+                      href={listingPath({
+                        intent: v.listing.intent,
+                        slug: v.listing.slug,
+                        // The customer endpoint does not return city/locality; the canonical redirect fixes the rest.
+                        city: { slug: '_' },
+                        locality: { slug: '_' },
+                      })}
+                      className="font-medium text-brand-700 hover:underline"
+                    >
+                      {v.listing.title}
+                    </Link>
+                    <p className="text-sm text-ink-muted">
+                      {v.preferredDate ? formatDate(v.preferredDate) : 'Any day'},{' '}
+                      {VISIT_SLOTS.find((s) => s.value === v.preferredSlot)?.label ?? v.preferredSlot}
+                    </p>
+                    <p className="text-xs text-ink-subtle">Requested {formatDateTime(v.createdAt)}</p>
+                  </div>
+                  <VisitStatusBadge status={v.status} />
+                </div>
+                {v.notes && <p className="mt-2 whitespace-pre-line text-sm text-ink-muted">{v.notes}</p>}
+                {v.status === 'REQUESTED' && (
+                  <div className="mt-3">
+                    <Button variant="outline" size="sm" loading={cancelling === v.id} onClick={() => cancel(v.id)}>
+                      Cancel request
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+      {q.data && (
+        <Pagination page={q.data.meta.page} pageSize={q.data.meta.pageSize} total={q.data.meta.total} onPageChange={setPage} />
+      )}
     </div>
   );
 }

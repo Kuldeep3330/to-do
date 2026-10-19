@@ -24,6 +24,7 @@ const ADMIN_INCLUDE = {
       locality: { include: { city: true } },
     },
   },
+  verifiedBy: { select: { name: true } },
   media: {
     where: { variant: 'ORIGINAL' as const },
     select: { id: true },
@@ -36,6 +37,7 @@ export const PUBLIC_INCLUDE = {
       locality: { include: { city: true } },
     },
   },
+  verifiedBy: { select: { name: true } },
   media: {
     select: {
       id: true,
@@ -322,6 +324,7 @@ export class ListingsService {
             data: {
               status: 'PUBLISHED',
               publishedAt: listing.published_at ?? new Date(),
+              lastConfirmedAt: new Date(),
             },
             include: ADMIN_INCLUDE,
           });
@@ -335,6 +338,56 @@ export class ListingsService {
       }
       this.mapWriteError(e);
     }
+  }
+
+  /** Marks a listing as physically verified by `userId` (also counts as a freshness confirmation). */
+  async verify(id: string, userId: string) {
+    const row = await this.updateLive(id, { verifiedAt: new Date(), verifiedByUserId: userId, lastConfirmedAt: new Date() });
+    return toAdminListing(row);
+  }
+
+  /** Confirms the listing is still available, resetting the freshness clock. */
+  async confirm(id: string) {
+    const row = await this.updateLive(id, { lastConfirmedAt: new Date() });
+    return toAdminListing(row);
+  }
+
+  private async updateLive(id: string, data: Prisma.ListingUncheckedUpdateInput) {
+    const existing = await this.prisma.listing.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (!existing) {
+      throw AppError.notFound('Listing not found');
+    }
+    if (existing.status === 'CLOSED') {
+      throw AppError.conflict('Closed listings cannot be verified or confirmed');
+    }
+    return this.prisma.listing.update({ where: { id }, data, include: ADMIN_INCLUDE });
+  }
+
+  /** Pauses published listings nobody has confirmed within `maxAgeDays`. Returns how many were paused. */
+  async pauseStale(maxAgeDays: number, now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - maxAgeDays * 86_400_000);
+    const stale = await this.prisma.listing.findMany({
+      where: {
+        status: 'PUBLISHED',
+        deletedAt: null,
+        OR: [
+          { lastConfirmedAt: { lt: cutoff } },
+          { lastConfirmedAt: null, publishedAt: { lt: cutoff } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (stale.length === 0) {
+      return 0;
+    }
+    const res = await this.prisma.listing.updateMany({
+      where: { id: { in: stale.map((l) => l.id) }, status: 'PUBLISHED' },
+      data: { status: 'PAUSED' },
+    });
+    return res.count;
   }
 
   async pause(id: string) {
