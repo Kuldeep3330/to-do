@@ -51,6 +51,15 @@ enum ListingIntent {
   @@map("listing_intent")
 }
 
+enum FeeMethod {
+  /// A flat amount in INR per deal.
+  FIXED
+  /// A percentage of the closed amount (monthly rent for rentals, sale price for purchases).
+  PERCENT
+
+  @@map("fee_method")
+}
+
 enum ListingStatus {
   DRAFT
   PUBLISHED
@@ -379,6 +388,8 @@ model Lead {
   firstResponseAt  DateTime?  @map("first_response_at") @db.Timestamptz(6)
   closedAmount     BigInt?    @map("closed_amount")
   closedOn         DateTime?  @map("closed_on") @db.Date
+  /// What NCR Homes earns on this won deal (INR). Computed from the fee rule when the deal is recorded; admins may adjust it.
+  feeAmount        BigInt?    @map("fee_amount")
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -456,6 +467,21 @@ model ServiceEnquiry {
   @@index([createdAt(sort: Desc)])
   @@index([phone, createdAt(sort: Desc)])
   @@map("service_enquiries")
+}
+
+/// The owner success fee: one rule per listing intent. Absent rule means no fee is calculated.
+model FeeRule {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  intent          ListingIntent @unique
+  method          FeeMethod
+  /// INR for FIXED; percent (0-100) for PERCENT.
+  value           Decimal       @db.Decimal(12, 2)
+  minFee          BigInt?       @map("min_fee")
+  maxFee          BigInt?       @map("max_fee")
+  updatedByUserId String?       @map("updated_by_user_id") @db.Uuid
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("fee_rules")
 }
 
 model AuditLog {

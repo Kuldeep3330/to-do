@@ -202,8 +202,21 @@ export type AdminLead = {
   closedAmount: number | null;
   /** Day the deal closed, YYYY-MM-DD. */
   closedOn: string | null;
+  /** What NCR Homes earns on the deal. Only present for admins; sales agents never receive it. */
+  feeAmount?: number | null;
   listing: { id: string; slug: string; title: string; intent: Intent; status: ListingStatus } | null;
   assignee: { id: string; name: string; email: string } | null;
+};
+
+/** The owner success fee for one listing intent. */
+export type FeeRule = {
+  intent: Intent;
+  method: 'PERCENT' | 'FIXED';
+  /** Percent (0-100) for PERCENT, rupees for FIXED. */
+  value: number;
+  minFee: number | null;
+  maxFee: number | null;
+  updatedAt: string;
 };
 
 /** Facts for a city or locality landing page, from published listings of one intent. */
@@ -262,6 +275,10 @@ export type DashboardCounts = {
   winRatePercent: number | null;
   wonRentMonthly: number;
   wonSaleValue: number;
+  /** Fees earned on deals closed in the last 30 days. Null for viewers without finance access. */
+  feesEarned: number | null;
+  /** Won deals in that period with no fee because no rule applied. Null without finance access. */
+  dealsWithoutFee: number | null;
   responseTargetMinutes: number;
   medianResponseMinutes: number | null;
   scopedToAssigned: boolean;

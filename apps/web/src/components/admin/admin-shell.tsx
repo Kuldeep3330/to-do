@@ -6,6 +6,7 @@ import { notFound, usePathname, useRouter } from 'next/navigation';
 import {
   Building2,
   CalendarCheck,
+  IndianRupee,
   Home,
   Inbox,
   LayoutDashboard,
@@ -30,6 +31,7 @@ const NAV: NavItem[] = [
   { href: '/admin/leads', label: 'Leads', icon: Inbox },
   { href: '/admin/visits', label: 'Visits', icon: CalendarCheck },
   { href: '/admin/users', label: 'Staff', icon: Users, adminOnly: true },
+  { href: '/admin/settings/fees', label: 'Fees', icon: IndianRupee, adminOnly: true },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

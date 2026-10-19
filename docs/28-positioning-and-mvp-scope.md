@@ -68,7 +68,9 @@ Ordered by value for effort. Items 1 and 2 are built.
 | 6 | **Amenities on listing detail** (known gap from doc 26) | Done 2026-10-19 |
 | 7 | **Locality landing pages** for search traffic | Done 2026-10-19 |
 
-**Out of scope until a deal has closed:** payments, owner self-posting, broker marketplace, maps, native apps.
+| 8 | **Money model**: owner success fee, with fee rules and the fee earned on each won deal (section 8g) | Done 2026-10-19 |
+
+**Out of scope until a deal has closed:** online payments and invoicing, owner self-posting, broker marketplace, maps, native apps.
 
 ## 6. Money: options and default
 
@@ -79,6 +81,8 @@ Ordered by value for effort. Items 1 and 2 are built.
 | Partner services | Commission on home loans, packers and movers, painting, cleaning | Good side income. The services catalogue already exists in the schema. Unlikely to cover costs alone. |
 
 Revisit after the first 10 closed deals. Until then, measure rather than charge.
+
+**Decision (2026-10-19):** the owner or landlord **success fee** is the money model. Nothing is charged to tenants or buyers. The first build covers **fee rules and the fee earned on each won deal** (section 8g). Invoices and online payments were not chosen and are not built.
 
 ## 7. How we will know it works
 
@@ -148,6 +152,23 @@ Track from the first week of the pilot:
 - **Freshness:** pages are cached for about 5 minutes, so a newly published home can take that long to appear on its locality page. On-demand refresh is still a non-goal.
 - **Adding an area:** create the locality in the admin (or the API). It gets a page automatically once it has a published home.
 - **Not included yet:** filters on the landing pages themselves (the full search handles that), neighbourhood write-ups, maps, and pages by property type or bedrooms (for example "2 BHK in Sector 62"), which would be the next source of search traffic.
+
+## 8g. Implementation notes for the money model (owner success fee)
+
+- **What it is:** when a deal is won, NCR Homes earns a fee from the owner. The fee comes from a rule you set per kind of deal: one for rentals, one for sales.
+- **A rule is one of:**
+  - **A percentage** of the closed amount: of the monthly rent for rentals (so 50 means half a month's rent), or of the sale price for sales.
+  - **A fixed amount** per deal.
+  - Either can have an optional **minimum** and **maximum**. The maximum is applied last, so it always wins.
+- **No rule means no fee.** A deal with no applicable rule shows "Not calculated" rather than ₹0, and the dashboard counts it under "Deals without a fee" so it is not forgotten. **There are no built-in rates.** The percentages in the demo data are placeholders. The real rates are your decision, set under **Admin → Fees**.
+- **How the fee is set on a deal:** it is calculated when the lead is marked Won, and again whenever the agreed amount changes. An admin can type a different fee (for example a discount or a waiver of ₹0). Changing only the closing date never changes the fee.
+- **Past deals are never rewritten.** Changing a rule affects deals recorded from then on. Each deal keeps the fee it was given.
+- **Who can see money:** admins only. Sales agents never receive fee amounts from the API, never see the fee field in the deal dialog, and do not see the Fees page. Two new permissions control this: `finance.read` (see fees) and `finance.manage` (change rules and type a fee by hand), both given to Admin and Super Admin.
+- **Where it shows:** Admin → Fees (set the two rules, with a live example); the Deal card and Mark-as-won dialog on a lead (the fee, prefilled and editable); the dashboard (fees earned in the last 30 days, and deals without a fee).
+- **Audit trail:** every rule change is recorded with who made it and the old and new values.
+- **API:** `GET /api/v1/admin/fee-rules`, `PUT /api/v1/admin/fee-rules/:intent` (`RENT` or `BUY`); `PATCH /api/v1/admin/leads/:id` accepts `feeAmount`; lead payloads and the dashboard include fee figures for finance viewers only. Migration `20261019140000_fee_rules`.
+- **One-time step for an existing environment:** run `npm run db:seed` so the new permissions are added to the Admin and Super Admin roles. Without it, admins cannot open the Fees page. `npm run prisma:seed:demo` adds sample rules for local use only.
+- **Not included yet (not chosen):** invoice records and payment status (due, sent, paid), online payment collection, tenant or buyer fees, partner-service commissions, per-agent earnings, and exporting fees for accounting. Deals won before this change have no fee until their amount is edited.
 
 ## 9. Open questions for the owner
 

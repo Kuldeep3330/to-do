@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FinanceModule } from '../finance/finance.module';
 import { AdminLeadsController, MeLeadsController, PublicLeadsController } from './leads.controller';
 import { LeadRateLimitGuard } from './lead-rate-limit.guard';
 import { LeadsService } from './leads.service';
@@ -6,6 +7,7 @@ import { AdminVisitsController, MeVisitsController } from './visits.controller';
 import { VisitsService } from './visits.service';
 
 @Module({
+  imports: [FinanceModule],
   controllers: [
     PublicLeadsController,
     MeLeadsController,

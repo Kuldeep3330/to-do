@@ -22,6 +22,10 @@ export type DashboardCounts = {
   wonRentMonthly: number;
   /** Sum of agreed prices on won sales (INR). */
   wonSaleValue: number;
+  /** What NCR Homes earned on deals closed in the last 30 days (INR). Null for viewers without finance access. */
+  feesEarned: number | null;
+  /** Won deals in that period that have no fee yet because no fee rule applied. Null without finance access. */
+  dealsWithoutFee: number | null;
   /** The response target in minutes. */
   responseTargetMinutes: number;
   /** Median minutes to first response over the last 30 days; null when nothing has been answered yet. */
@@ -65,7 +69,7 @@ export class DashboardService {
       }),
       this.prisma.lead.findMany({
         where: { ...leadScope, status: 'WON', closedAmount: { not: null }, closedOn: { gte: sinceDay } },
-        select: { closedAmount: true, listing: { select: { intent: true } } },
+        select: { closedAmount: true, feeAmount: true, listing: { select: { intent: true } } },
         take: 5000,
       }),
       this.prisma.lead.count({ where: { ...leadScope, createdAt: { gte: since } } }),
@@ -73,7 +77,11 @@ export class DashboardService {
 
     let wonRentMonthly = 0;
     let wonSaleValue = 0;
+    let feesEarned = 0;
+    let dealsWithoutFee = 0;
     for (const w of won) {
+      if (w.feeAmount == null) dealsWithoutFee += 1;
+      else feesEarned += Number(w.feeAmount);
       const amount = Number(w.closedAmount);
       if (w.listing?.intent === 'RENT') wonRentMonthly += amount;
       else wonSaleValue += amount;
@@ -94,6 +102,8 @@ export class DashboardService {
       winRatePercent: recentLeads === 0 ? null : Math.round((won.length / recentLeads) * 100),
       wonRentMonthly,
       wonSaleValue,
+      feesEarned: codes.includes('finance.read') ? feesEarned : null,
+      dealsWithoutFee: codes.includes('finance.read') ? dealsWithoutFee : null,
       responseTargetMinutes: slaMinutes(),
       medianResponseMinutes: median(minutes),
       scopedToAssigned: !seeAllLeads,

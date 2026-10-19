@@ -28,6 +28,7 @@ export type LeadRow = {
   firstResponseAt?: Date | null;
   closedAmount?: bigint | null;
   closedOn?: Date | null;
+  feeAmount?: bigint | null;
   createdAt: Date;
   updatedAt: Date;
   listing?: ListingBits | null;
@@ -52,6 +53,8 @@ export type AdminLeadDetail = ResponseInfo & {
   closedAmount: number | null;
   /** Day the deal closed, YYYY-MM-DD. */
   closedOn: string | null;
+  /** What NCR Homes earns on the deal. Present only for viewers with finance access; sales agents never get this key. */
+  feeAmount?: number | null;
   id: string;
   listingId: string | null;
   userId: string | null;
@@ -88,8 +91,9 @@ export function toCustomerLead(row: LeadRow): CustomerLead {
   };
 }
 
-export function toAdminLead(row: LeadRow, now = new Date()): AdminLeadDetail {
+export function toAdminLead(row: LeadRow, now = new Date(), finance = false): AdminLeadDetail {
   return {
+    ...(finance ? { feeAmount: row.feeAmount == null ? null : Number(row.feeAmount) } : {}),
     ...responseInfo(row, now),
     closedAmount: row.closedAmount == null ? null : Number(row.closedAmount),
     closedOn: row.closedOn ? row.closedOn.toISOString().slice(0, 10) : null,

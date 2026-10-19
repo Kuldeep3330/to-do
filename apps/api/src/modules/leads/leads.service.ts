@@ -6,6 +6,8 @@ import { offsetOf } from '../../common/dto/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { FeeRulesService } from '../finance/fee-rules.service';
+import { computeFee } from '../finance/fees.compute';
 import { toAdminLead, toCustomerLead } from './leads.mapper';
 import { overdueCutoff } from './leads.sla';
 import { todayIst } from './visits.service';
@@ -48,6 +50,7 @@ export class LeadsService {
     private readonly prisma: PrismaService,
     private readonly rbac: RbacService,
     private readonly notifications: NotificationsService,
+    private readonly feeRules: FeeRulesService,
   ) {}
 
   async createPublic(input: CreateLeadInput, userId: string | undefined) {
@@ -169,7 +172,7 @@ export class LeadsService {
       this.prisma.lead.count({ where }),
     ]);
     return {
-      data: rows.map((r) => toAdminLead(r)),
+      data: rows.map((r) => toAdminLead(r, new Date(), codes.includes('finance.read'))),
       meta: { page: query.page, pageSize: query.pageSize, total },
     };
   }
@@ -190,11 +193,12 @@ export class LeadsService {
     if (!row) {
       throw AppError.notFound('Lead not found');
     }
-    return toAdminLead(row);
+    return toAdminLead(row, new Date(), codes.includes('finance.read'));
   }
 
   async patchAdmin(actorId: string, id: string, input: PatchLeadInput) {
-    const dealFields = input.closedAmount !== undefined || input.closedOn !== undefined;
+    const dealFields =
+      input.closedAmount !== undefined || input.closedOn !== undefined || input.feeAmount !== undefined;
     if (input.status === undefined && input.assignedToUserId === undefined && !dealFields) {
       throw AppError.validation('Nothing to update');
     }
@@ -220,7 +224,11 @@ export class LeadsService {
     if (input.assignedToUserId) {
       await this.assertAssignable(input.assignedToUserId);
     }
-    const deal = this.resolveDeal(current, input);
+    // Only people who manage finance may set the fee by hand; everyone else gets the rule's amount.
+    if (input.feeAmount !== undefined && !codes.includes('finance.manage')) {
+      throw AppError.forbidden();
+    }
+    const deal = await this.resolveDeal(current, input);
     const row = await this.prisma.lead.update({
       where: { id },
       data: {
@@ -234,19 +242,31 @@ export class LeadsService {
       },
       include: ADMIN_INCLUDE,
     });
-    return toAdminLead(row);
+    return toAdminLead(row, new Date(), codes.includes('finance.read'));
   }
 
   /**
    * Deal tracking rules: a lead cannot be marked won without its closing value, deal details only
    * exist on won leads, and moving a lead away from won clears them.
+   *
+   * The fee NCR Homes earns is worked out here too: from the fee rule when the deal is recorded or
+   * its amount changes, or the exact figure an admin typed. A past deal's fee is never recomputed
+   * just because the rule changed later.
    */
-  private resolveDeal(
-    current: { status: string; createdAt: Date; closedAmount?: bigint | null; closedOn?: Date | null },
+  private async resolveDeal(
+    current: {
+      status: string;
+      createdAt: Date;
+      closedAmount?: bigint | null;
+      closedOn?: Date | null;
+      feeAmount?: bigint | null;
+      listing?: { intent: string } | null;
+    },
     input: PatchLeadInput,
-  ): { closedAmount?: bigint | null; closedOn?: Date | null } {
+  ): Promise<{ closedAmount?: bigint | null; closedOn?: Date | null; feeAmount?: bigint | null }> {
     const next = input.status ?? current.status;
-    const hasDeal = input.closedAmount !== undefined || input.closedOn !== undefined;
+    const hasDeal =
+      input.closedAmount !== undefined || input.closedOn !== undefined || input.feeAmount !== undefined;
 
     if (next !== 'WON') {
       if (hasDeal) {
@@ -254,7 +274,7 @@ export class LeadsService {
           { path: 'closedAmount', message: 'Mark the lead as won first' },
         ]);
       }
-      return current.status === 'WON' ? { closedAmount: null, closedOn: null } : {};
+      return current.status === 'WON' ? { closedAmount: null, closedOn: null, feeAmount: null } : {};
     }
 
     const amount = input.closedAmount ?? (current.closedAmount != null ? Number(current.closedAmount) : undefined);
@@ -282,7 +302,22 @@ export class LeadsService {
         { path: 'closedOn', message: `Choose ${createdDay} or later` },
       ]);
     }
-    return { closedAmount: BigInt(amount), closedOn: parsed };
+    const result: { closedAmount: bigint; closedOn: Date; feeAmount?: bigint | null } = {
+      closedAmount: BigInt(amount),
+      closedOn: parsed,
+    };
+
+    if (input.feeAmount !== undefined) {
+      result.feeAmount = BigInt(input.feeAmount);
+    } else {
+      const amountChanged = current.status !== 'WON' || BigInt(amount) !== (current.closedAmount ?? null);
+      if (amountChanged || current.feeAmount == null) {
+        const intent = current.listing?.intent === 'RENT' || current.listing?.intent === 'BUY' ? current.listing.intent : null;
+        const fee = intent ? computeFee(await this.feeRules.forIntent(intent), amount) : null;
+        result.feeAmount = fee === null ? null : BigInt(fee);
+      }
+    }
+    return result;
   }
 
   private async assertAssignable(userId: string) {

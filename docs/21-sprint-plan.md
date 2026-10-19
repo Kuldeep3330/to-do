@@ -178,5 +178,6 @@ Weeks 1–8 of the original plan are built (see `docs/27-project-status.md`). Be
 | 5 | Deal tracking on WON leads | Done |
 | 6 | Amenities on listing detail | Done |
 | 7 | Locality landing pages | Done |
+| 8 | Money model: owner success fee (fee rules + fee earned per deal) | Done |
 
 Visit requests and locality pages were killable in section 1; the pilot promotes them because the positioning depends on them.

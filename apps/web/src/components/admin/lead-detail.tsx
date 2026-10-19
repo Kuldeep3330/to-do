@@ -13,7 +13,7 @@ import { Card, ErrorState, Skeleton } from '@/components/ui/feedback';
 import { Field, Select } from '@/components/ui/form-controls';
 import { LeadStatusBadge } from '@/components/ui/status-badge';
 import { useToast } from '@/components/ui/toast';
-import { adminLeadsApi, adminStaffApi } from '@/lib/api/endpoints';
+import { adminFeeRulesApi, adminLeadsApi, adminStaffApi } from '@/lib/api/endpoints';
 import { ApiError, errorMessage } from '@/lib/api/errors';
 import type { AdminLead, LeadStatus } from '@/lib/api/types';
 import { isAdmin, useMe } from '@/lib/auth/use-auth';
@@ -28,6 +28,13 @@ export function LeadDetail({ id }: { id: string }) {
   const [dealMode, setDealMode] = React.useState<'win' | 'edit' | null>(null);
 
   const lead = useQuery({ queryKey: ['admin', 'leads', id], queryFn: () => adminLeadsApi.get(id) });
+  // Money is admin-only: agents never load fee rules or see a fee field.
+  const feeRules = useQuery({
+    queryKey: ['admin', 'fee-rules'],
+    queryFn: adminFeeRulesApi.list,
+    enabled: canAssign,
+    staleTime: 60_000,
+  });
   const staff = useQuery({
     queryKey: ['admin', 'staff'],
     queryFn: adminStaffApi.assignable,
@@ -194,6 +201,14 @@ export function LeadDetail({ id }: { id: string }) {
                 <dt className="text-ink-muted">Closed on</dt>
                 <dd className="font-medium">{l.closedOn ? formatDate(l.closedOn) : 'Not recorded'}</dd>
               </div>
+              {l.feeAmount !== undefined && (
+                <div>
+                  <dt className="text-ink-muted">Our fee</dt>
+                  <dd className="font-medium">
+                    {l.feeAmount === null ? 'Not calculated (no fee rule applied)' : formatINR(l.feeAmount)}
+                  </dd>
+                </div>
+              )}
             </dl>
             <Button variant="outline" size="sm" onClick={() => setDealMode('edit')}>
               {l.closedAmount ? 'Edit deal' : 'Add deal details'}
@@ -207,13 +222,19 @@ export function LeadDetail({ id }: { id: string }) {
         onOpenChange={(o) => !o && setDealMode(null)}
         intent={l.listing ? (l.listing.intent === 'RENT' ? 'RENT' : 'BUY') : null}
         enquiredOn={l.createdAt.slice(0, 10)}
-        initial={{ amount: l.closedAmount, closedOn: l.closedOn }}
+        initial={{ amount: l.closedAmount, closedOn: l.closedOn, fee: l.feeAmount }}
         editing={dealMode === 'edit'}
+        finance={
+          canAssign
+            ? { rule: feeRules.data?.find((r) => r.intent === (l.listing?.intent === 'RENT' ? 'RENT' : 'BUY')) }
+            : undefined
+        }
         onSubmit={async (v) => {
           await update.mutateAsync({
             ...(dealMode === 'win' ? { status: 'WON' as const } : {}),
             closedAmount: v.amount,
             closedOn: v.closedOn,
+            ...(v.feeAmount !== undefined ? { feeAmount: v.feeAmount } : {}),
           });
           setDealMode(null);
         }}

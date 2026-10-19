@@ -43,6 +43,8 @@ export const patchLeadSchema = z.object({
   assignedToUserId: z.string().uuid().nullable().optional(),
   /** Deal value in whole INR: monthly rent for a rental, sale price for a purchase. Only for won leads. */
   closedAmount: z.number().int().positive().max(100_000_000_000).optional(),
+  /** What NCR Homes earns on this deal (INR). Admins only; omit to use the fee rule. */
+  feeAmount: z.number().int().min(0).max(10_000_000_000).optional(),
   /** Day the deal closed, YYYY-MM-DD. Defaults to today. */
   closedOn: z
     .string()

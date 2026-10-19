@@ -26,6 +26,9 @@ const PERMISSIONS = [
   'role.manage',
   'audit.read',
   'dashboard.read',
+  // Money: fee amounts are visible to admins only, never to sales agents.
+  'finance.read',
+  'finance.manage',
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
@@ -54,6 +57,8 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'user.manage',
     'audit.read',
     'dashboard.read',
+    'finance.read',
+    'finance.manage',
   ],
   SUPER_ADMIN: PERMISSIONS,
 };

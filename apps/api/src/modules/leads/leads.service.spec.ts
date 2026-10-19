@@ -62,7 +62,8 @@ describe('LeadsService', () => {
     };
     rbac = { getPermissionCodes: jest.fn(), isStaff: jest.fn() };
     notifications = { notifyLeadCreated: jest.fn().mockResolvedValue(undefined) };
-    service = new LeadsService(prisma as never, rbac as never, notifications as never);
+    const feeRules = { forIntent: jest.fn().mockResolvedValue(null) };
+    service = new LeadsService(prisma as never, rbac as never, notifications as never, feeRules as never);
   });
 
   it('creates a NEW lead and notifies after commit', async () => {

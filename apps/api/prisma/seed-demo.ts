@@ -252,6 +252,34 @@ async function seedVisits(users: Record<string, string>) {
   }
 }
 
+// Sample fee rules so the money screens have something to show locally. These are placeholders, not decided prices:
+// the real rates are the owner's call and are set under Admin > Fees.
+async function seedFees() {
+  const rules = [
+    { intent: 'RENT', value: 50 }, // half a month's rent
+    { intent: 'BUY', value: 1 }, // one percent of the sale price
+  ] as const;
+  for (const r of rules) {
+    await prisma.feeRule.upsert({
+      where: { intent: r.intent },
+      update: {},
+      create: { intent: r.intent, method: 'PERCENT', value: r.value },
+    });
+  }
+  const won = await prisma.lead.findMany({
+    where: { status: 'WON', closedAmount: { not: null }, feeAmount: null },
+    select: { id: true, closedAmount: true, listing: { select: { intent: true } } },
+  });
+  for (const w of won) {
+    const pct = w.listing?.intent === 'BUY' ? 1 : w.listing?.intent === 'RENT' ? 50 : null;
+    if (pct === null || w.closedAmount === null) continue;
+    await prisma.lead.update({
+      where: { id: w.id },
+      data: { feeAmount: BigInt(Math.round((Number(w.closedAmount) * pct) / 100)) },
+    });
+  }
+}
+
 async function main() {
   if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed demo data in production');
   const users = await seedUsers();
@@ -260,6 +288,7 @@ async function main() {
   await seedLeads(listings, users);
   await seedAgentData(listings, users);
   await seedVisits(users);
+  await seedFees();
   console.log(`Demo users: ${USERS.length}, listings: ${listings.length}`);
 }
 

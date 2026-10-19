@@ -15,6 +15,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { AmenitiesModule } from './modules/amenities/amenities.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { ListingsModule } from './modules/listings/listings.module';
@@ -47,6 +48,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PropertiesModule,
     ListingsModule,
     MediaModule,
+    FinanceModule,
     LeadsModule,
     SavedModule,
     DashboardModule,

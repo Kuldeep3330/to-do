@@ -7,9 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/feedback';
 import { Field, Input, fieldAria } from '@/components/ui/form-controls';
+import type { FeeRule } from '@/lib/api/types';
+import { computeFee, describeRule } from '@/lib/fees';
 import { applyApiError } from '@/lib/forms';
-import { formatINR } from '@/lib/format';
+import { formatINR, parseMoneyInput } from '@/lib/format';
 import { createDealSchema, istToday, type DealOutput, type DealValues } from '@/lib/schemas/deal';
+
+export type DealSubmit = DealOutput & {
+  /** Set only when staff typed a fee by hand; otherwise the server works it out from the fee rule. */
+  feeAmount?: number;
+};
 
 type Props = {
   open: boolean;
@@ -18,20 +25,38 @@ type Props = {
   intent: 'RENT' | 'BUY' | null;
   /** Day the enquiry arrived (YYYY-MM-DD): the earliest allowed closing day. */
   enquiredOn: string;
-  initial?: { amount: number | null; closedOn: string | null };
+  initial?: { amount: number | null; closedOn: string | null; fee?: number | null };
   /** Editing an existing deal rather than marking a lead won. */
   editing?: boolean;
-  onSubmit: (values: DealOutput) => Promise<void>;
+  /**
+   * Present only for people who may see money (admins). Sales agents get no fee field at all.
+   * `rule` is the fee rule for this lead's listing, or undefined when none is set.
+   */
+  finance?: { rule: FeeRule | undefined };
+  onSubmit: (values: DealSubmit) => Promise<void>;
 };
 
-export function DealDialog({ open, onOpenChange, intent, enquiredOn, initial, editing = false, onSubmit }: Props) {
+export function DealDialog({
+  open,
+  onOpenChange,
+  intent,
+  enquiredOn,
+  initial,
+  editing = false,
+  finance,
+  onSubmit,
+}: Props) {
   const [formError, setFormError] = React.useState<string | null>(null);
+  // null means "use the calculated fee"; a string means staff typed their own.
+  const [feeText, setFeeText] = React.useState<string | null>(null);
+  const [feeError, setFeeError] = React.useState<string | null>(null);
   const schema = React.useMemo(() => createDealSchema(enquiredOn), [enquiredOn]);
   const {
     register,
     handleSubmit,
     setError,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<DealValues, unknown, DealOutput>({
     resolver: zodResolver(schema),
@@ -42,6 +67,8 @@ export function DealDialog({ open, onOpenChange, intent, enquiredOn, initial, ed
   React.useEffect(() => {
     if (open) {
       setFormError(null);
+      setFeeText(null);
+      setFeeError(null);
       reset({
         amount: initial?.amount ? String(initial.amount) : '',
         closedOn: initial?.closedOn ?? istToday(),
@@ -52,10 +79,30 @@ export function DealDialog({ open, onOpenChange, intent, enquiredOn, initial, ed
   const amountLabel = intent === 'RENT' ? 'Monthly rent agreed (₹)' : intent === 'BUY' ? 'Sale price agreed (₹)' : 'Deal value agreed (₹)';
   const err = (n: keyof DealValues) => errors[n]?.message as string | undefined;
 
+  const typedAmount = parseMoneyInput(watch('amount') ?? '');
+  // The fee shown by default: the saved one while the amount is unchanged, otherwise a fresh calculation.
+  const calculated =
+    typedAmount === null
+      ? null
+      : editing && initial?.fee != null && typedAmount === initial.amount
+        ? initial.fee
+        : computeFee(finance?.rule, typedAmount);
+  const shownFee = feeText ?? (calculated === null ? '' : String(calculated));
+
   const submit = handleSubmit(async (values) => {
     setFormError(null);
+    setFeeError(null);
+    let feeAmount: number | undefined;
+    if (finance && feeText !== null && feeText.trim() !== '') {
+      const parsed = parseMoneyInput(feeText);
+      if (parsed === null) {
+        setFeeError('Enter an amount in rupees');
+        return;
+      }
+      feeAmount = parsed;
+    }
     try {
-      await onSubmit(values);
+      await onSubmit({ ...values, ...(feeAmount !== undefined ? { feeAmount } : {}) });
     } catch (e) {
       setFormError(applyApiError(e, setError, ['amount', 'closedOn']));
     }
@@ -81,6 +128,28 @@ export function DealDialog({ open, onOpenChange, intent, enquiredOn, initial, ed
           <Field label="Closing date" htmlFor="deal-date" error={err('closedOn')} required>
             <Input type="date" max={istToday()} min={enquiredOn} {...fieldAria('deal-date', err('closedOn'))} {...register('closedOn')} />
           </Field>
+
+          {finance && (
+            <Field
+              label="Our fee (₹)"
+              htmlFor="deal-fee"
+              error={feeError ?? undefined}
+              hint={
+                finance.rule && intent
+                  ? `From the fee rule: ${describeRule(intent, finance.rule)}. Change it to give a discount.`
+                  : 'No fee rule is set for this kind of deal, so enter the fee by hand or set a rule under Fees.'
+              }
+            >
+              <Input
+                inputMode="numeric"
+                autoComplete="off"
+                {...fieldAria('deal-fee', feeError ?? undefined, 'x')}
+                value={shownFee}
+                onChange={(e) => setFeeText(e.target.value)}
+              />
+            </Field>
+          )}
+
           {initial?.amount ? <p className="text-xs text-ink-subtle">Currently {formatINR(initial.amount)}</p> : null}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

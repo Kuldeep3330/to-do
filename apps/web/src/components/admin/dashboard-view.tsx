@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { AlarmClock, ArrowRight, FilePen, IndianRupee, Inbox, Megaphone, Sun, Timer, Trophy, Users } from 'lucide-react';
+import { AlarmClock, ArrowRight, FilePen, IndianRupee, Inbox, Megaphone, Sun, Timer, TriangleAlert, Trophy, Users, Wallet } from 'lucide-react';
 import { PageHeader } from '@/components/admin/page-header';
 import { Alert, Card, ErrorState, Skeleton } from '@/components/ui/feedback';
 import { dashboardApi } from '@/lib/api/endpoints';
@@ -61,6 +61,29 @@ export function DashboardView() {
           icon: IndianRupee,
           hint: 'Sum of agreed sale prices, last 30 days',
         },
+        // Money is admin-only: these two tiles are absent for sales agents (the API sends null).
+        ...(d.feesEarned !== null
+          ? [
+              {
+                label: 'Fees earned',
+                value: formatINRCompact(d.feesEarned),
+                href: '/admin/settings/fees',
+                icon: Wallet,
+                hint: 'On deals closed in the last 30 days',
+              },
+            ]
+          : []),
+        ...(d.dealsWithoutFee !== null && d.dealsWithoutFee > 0
+          ? [
+              {
+                label: 'Deals without a fee',
+                value: d.dealsWithoutFee,
+                href: '/admin/settings/fees',
+                icon: TriangleAlert,
+                hint: 'No fee rule applied. Set one under Fees.',
+              },
+            ]
+          : []),
         { label: 'Leads today', value: d.leadsToday, href: '/admin/leads', icon: Sun },
         { label: 'All leads', value: d.leadsTotal, href: '/admin/leads', icon: Users },
         ...(d.publishedListings !== null

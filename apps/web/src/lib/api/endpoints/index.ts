@@ -10,6 +10,8 @@ import type {
   Amenity,
   City,
   DashboardCounts,
+  FeeRule,
+  Intent,
   AdminVisit,
   CustomerLead,
   CustomerVisit,
@@ -115,9 +117,23 @@ export const adminLeadsApi = {
   get: (id: string) => apiData<AdminLead>(`/api/v1/admin/leads/${id}`),
   update: (
     id: string,
-    body: { status?: LeadStatus; assignedToUserId?: string | null; closedAmount?: number; closedOn?: string },
+    body: {
+      status?: LeadStatus;
+      assignedToUserId?: string | null;
+      closedAmount?: number;
+      closedOn?: string;
+      feeAmount?: number;
+    },
   ) =>
     apiData<AdminLead>(`/api/v1/admin/leads/${id}`, { method: 'PATCH', body }),
+};
+
+export const adminFeeRulesApi = {
+  list: () => apiData<FeeRule[]>('/api/v1/admin/fee-rules'),
+  set: (
+    intent: Intent,
+    body: { method: 'PERCENT' | 'FIXED'; value: number; minFee: number | null; maxFee: number | null },
+  ) => apiData<FeeRule>(`/api/v1/admin/fee-rules/${intent}`, { method: 'PUT', body }),
 };
 
 export type VisitCommand = 'confirm' | 'complete' | 'no-show' | 'cancel';
