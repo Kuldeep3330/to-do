@@ -1,6 +1,6 @@
 import 'server-only';
 import { serverApi } from './server';
-import type { City, Locality, Paged, PublicListingCard, PublicListingDetail } from './types';
+import type { AreaSummary, City, Locality, Paged, PublicListingCard, PublicListingDetail } from './types';
 import { toApiQuery, type SearchFilters } from '@/lib/search-params';
 
 const HOUR = 3600;
@@ -22,6 +22,12 @@ export const publicData = {
       revalidate,
       tags: ['listings', `listing:${slug}`],
     }).then((r) => r.data),
+
+  area: (intent: 'BUY' | 'RENT', citySlug: string, localitySlug?: string) =>
+    serverApi<{ data: AreaSummary }>(
+      `/api/v1/areas/${encodeURIComponent(citySlug)}${localitySlug ? `/${encodeURIComponent(localitySlug)}` : ''}`,
+      { query: { intent }, revalidate: 300, tags: ['listings', 'locations'] },
+    ).then((r) => r.data),
 
   cities: () =>
     serverApi<{ data: City[] }>('/api/v1/cities', { revalidate: HOUR, tags: ['locations'] }).then((r) => r.data),

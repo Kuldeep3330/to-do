@@ -3,7 +3,7 @@ import { serverApi } from '@/lib/api/server';
 import { publicData } from '@/lib/api/public';
 import type { Paged, PublicListingCard } from '@/lib/api/types';
 import { config } from '@/lib/config';
-import { listingPath } from '@/lib/routes';
+import { areaPath, listingPath } from '@/lib/routes';
 import { searchHref } from '@/lib/search-params';
 
 export const revalidate = 3600;
@@ -45,6 +45,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const cities = await publicData.cities();
     for (const c of cities) {
       entries.push({ url: abs(searchHref({ city: c.slug })), changeFrequency: 'daily', priority: 0.6 });
+    }
+  } catch {}
+  // Landing pages only for areas that actually have homes: empty pages are noindex and stay out of the sitemap.
+  try {
+    const cities = await publicData.cities();
+    for (const intent of ['RENT', 'BUY'] as const) {
+      for (const c of cities) {
+        const area = await publicData.area(intent, c.slug);
+        if (area.stats.count === 0) continue;
+        entries.push({ url: abs(areaPath(intent, c.slug)), changeFrequency: 'daily', priority: 0.7 });
+        for (const l of area.localities) {
+          entries.push({ url: abs(areaPath(intent, c.slug, l.slug)), changeFrequency: 'daily', priority: 0.6 });
+        }
+      }
     }
   } catch {}
   try {

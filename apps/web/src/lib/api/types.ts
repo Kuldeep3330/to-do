@@ -206,6 +206,22 @@ export type AdminLead = {
   assignee: { id: string; name: string; email: string } | null;
 };
 
+/** Facts for a city or locality landing page, from published listings of one intent. */
+export type AreaSummary = {
+  city: NamedRef;
+  locality: NamedRef | null;
+  intent: Intent;
+  stats: {
+    count: number;
+    minPrice: number | null;
+    maxPrice: number | null;
+    medianPrice: number | null;
+    verifiedCount: number;
+  };
+  /** Other areas with homes (siblings for a locality page, every area for a city page). */
+  localities: { name: string; slug: string; count: number }[];
+};
+
 export type City = { id: string; name: string; slug: string };
 export type Locality = { id: string; name: string; slug: string };
 export type Amenity = { id: string; code: string; name: string };

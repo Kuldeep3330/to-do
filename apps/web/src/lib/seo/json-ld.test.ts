@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { PublicListingDetail } from '@/lib/api/types';
-import { listingJsonLd } from './json-ld';
+import type { AreaSummary, PublicListingDetail } from '@/lib/api/types';
+import { areaJsonLd, listingJsonLd } from './json-ld';
 import { amenityIcon } from '@/components/listing/amenity-list';
 
 const base = {
@@ -39,6 +39,26 @@ describe('listing structured data amenities', () => {
 
   it('leaves the field out when there are no amenities', () => {
     expect(listingJsonLd(base).about.amenityFeature).toBeUndefined();
+  });
+});
+
+describe('area structured data', () => {
+  const area = {
+    city: { name: 'Noida', slug: 'noida' },
+    locality: { name: 'Sector 62', slug: 'sector-62' },
+    intent: 'RENT',
+    stats: { count: 2, minPrice: 18000, maxPrice: 30000, medianPrice: 24000, verifiedCount: 1 },
+    localities: [],
+  } as unknown as AreaSummary;
+
+  it('describes the page as a collection of the homes shown', () => {
+    const ld = areaJsonLd(area, [{ ...base, slug: 'a', city: { name: 'Noida', slug: 'noida' }, locality: { name: 'Sector 62', slug: 'sector-62' } } as never], '/rent/noida/sector-62');
+    expect(ld['@type']).toBe('CollectionPage');
+    expect(ld.name).toBe('Homes for rent in Sector 62, Noida');
+    expect(ld.url).toMatch(/\/rent\/noida\/sector-62$/);
+    expect(ld.mainEntity.numberOfItems).toBe(2);
+    expect(ld.mainEntity.itemListElement).toHaveLength(1);
+    expect(ld.mainEntity.itemListElement[0].url).toMatch(/\/rent\/noida\/sector-62\/a$/);
   });
 });
 

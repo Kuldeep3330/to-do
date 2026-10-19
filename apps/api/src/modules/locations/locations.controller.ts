@@ -23,6 +23,31 @@ export class LocationsPublicController {
   async localities(@Param('citySlug') citySlug: string) {
     return { data: await this.locations.listPublicLocalities(citySlug) };
   }
+
+  @Public()
+  @Get('areas/:citySlug')
+  @Header('Cache-Control', 'public, max-age=60')
+  async city(@Param('citySlug') citySlug: string, @Query('intent') intent?: string) {
+    return { data: await this.locations.areaSummary(citySlug, null, parseIntent(intent)) };
+  }
+
+  @Public()
+  @Get('areas/:citySlug/:localitySlug')
+  @Header('Cache-Control', 'public, max-age=60')
+  async locality(
+    @Param('citySlug') citySlug: string,
+    @Param('localitySlug') localitySlug: string,
+    @Query('intent') intent?: string,
+  ) {
+    return { data: await this.locations.areaSummary(citySlug, localitySlug, parseIntent(intent)) };
+  }
+}
+
+function parseIntent(value: string | undefined): 'BUY' | 'RENT' {
+  if (value !== 'BUY' && value !== 'RENT') {
+    throw AppError.validation('Invalid intent', [{ path: 'intent', message: 'Use BUY or RENT' }]);
+  }
+  return value;
 }
 
 @Controller('api/v1/admin')

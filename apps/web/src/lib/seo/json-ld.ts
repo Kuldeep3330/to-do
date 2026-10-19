@@ -1,4 +1,5 @@
-import type { PublicListingDetail } from '@/lib/api/types';
+import type { AreaSummary, PublicListingCard, PublicListingDetail } from '@/lib/api/types';
+import { areaDescription, areaHeading } from '@/lib/area-copy';
 import { config } from '@/lib/config';
 import { listingPath } from '@/lib/routes';
 
@@ -54,6 +55,27 @@ export function listingJsonLd(l: PublicListingDetail) {
               l.intent === 'RENT' ? 'http://purl.org/goodrelations/v1#LeaseOut' : 'http://purl.org/goodrelations/v1#Sell',
           }
         : undefined,
+  };
+}
+
+/** CollectionPage for a city/locality landing page, listing the homes shown on it. */
+export function areaJsonLd(area: AreaSummary, listings: PublicListingCard[], path: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: areaHeading(area),
+    description: areaDescription(area),
+    url: `${config.appUrl}${path}`,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: area.stats.count,
+      itemListElement: listings.map((l, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${config.appUrl}${listingPath(l)}`,
+        name: l.title,
+      })),
+    },
   };
 }
 

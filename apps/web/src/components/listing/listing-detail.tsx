@@ -12,7 +12,7 @@ import { ApiError } from '@/lib/api/errors';
 import { publicData } from '@/lib/api/public';
 import type { Intent, PublicListingDetail } from '@/lib/api/types';
 import { formatArea, formatBedrooms, formatDate, formatINR, formatPrice, humanize } from '@/lib/format';
-import { listingPath } from '@/lib/routes';
+import { areaPath, listingPath } from '@/lib/routes';
 import { breadcrumbJsonLd, jsonLdString, listingJsonLd, truncate } from '@/lib/seo/json-ld';
 import { searchHref } from '@/lib/search-params';
 
@@ -87,8 +87,8 @@ export async function ListingDetail({ intent, params }: { intent: Intent; params
   const crumbs = [
     { name: 'Home', path: '/' },
     { name: l.intent === 'RENT' ? 'Rent' : 'Buy', path: searchHref({ intent: l.intent }) },
-    { name: l.city.name, path: searchHref({ intent: l.intent, city: l.city.slug }) },
-    { name: l.locality.name, path: searchHref({ intent: l.intent, city: l.city.slug, locality: l.locality.slug }) },
+    { name: l.city.name, path: areaPath(l.intent, l.city.slug) },
+    { name: l.locality.name, path: areaPath(l.intent, l.city.slug, l.locality.slug) },
   ];
 
   return (

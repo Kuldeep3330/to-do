@@ -66,7 +66,7 @@ Ordered by value for effort. Items 1 and 2 are built.
 | 4 | **Lead response timer**: overdue highlighting in the inbox against the 2-hour target | Done 2026-10-19 |
 | 5 | **Deal tracking**: closed price and date when a lead becomes WON, so revenue and conversion can be measured | Done 2026-10-19 |
 | 6 | **Amenities on listing detail** (known gap from doc 26) | Done 2026-10-19 |
-| 7 | **Locality landing pages** for search traffic | Planned |
+| 7 | **Locality landing pages** for search traffic | Done 2026-10-19 |
 
 **Out of scope until a deal has closed:** payments, owner self-posting, broker marketplace, maps, native apps.
 
@@ -137,6 +137,17 @@ Track from the first week of the pilot:
 - **SEO:** each amenity is also added to the page's structured data as an `amenityFeature`.
 - **Content:** amenities come from the property in the admin form; nothing new to enter. Listings whose property has no amenities selected will show no section, so field staff should fill this in during the visit.
 - **Not included yet:** filtering search by amenity.
+
+## 8f. Implementation notes for item 7 (locality landing pages)
+
+- **URLs:** `/rent/{city}`, `/rent/{city}/{locality}`, `/buy/{city}` and `/buy/{city}/{locality}`. They sit beside the existing listing URLs (`/rent/{city}/{locality}/{slug}`), so a listing page's breadcrumbs now link up to its locality page and city page.
+- **What a page shows:** a heading, a plain-language summary, a facts strip (number of homes, lowest, middle and highest price, and how many were verified by our team), the 12 newest homes with a "View all" link into search, links to other areas that have homes, and a link to the same area for the other intent.
+- **No invented content:** every sentence is built from real numbers for that area. The "middle price" is only shown when there are at least 3 homes, and rent and sale are never mixed on one page. There is no filler text, so the pages stay honest and unique.
+- **Search engines:** each page has its own title, description, canonical address, structured data (a collection of the homes shown) and breadcrumbs. Pages for areas with no homes still work for visitors but are marked `noindex` and left out of the sitemap, to avoid thin pages. Unknown cities or localities return a real 404.
+- **API:** `GET /api/v1/areas/:city?intent=RENT|BUY` and `GET /api/v1/areas/:city/:locality?intent=...`, public and cached for a minute. Only published, non-deleted listings are counted.
+- **Freshness:** pages are cached for about 5 minutes, so a newly published home can take that long to appear on its locality page. On-demand refresh is still a non-goal.
+- **Adding an area:** create the locality in the admin (or the API). It gets a page automatically once it has a published home.
+- **Not included yet:** filters on the landing pages themselves (the full search handles that), neighbourhood write-ups, maps, and pages by property type or bedrooms (for example "2 BHK in Sector 62"), which would be the next source of search traffic.
 
 ## 9. Open questions for the owner
 

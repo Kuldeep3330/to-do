@@ -31,7 +31,7 @@ An admin can create a property, create and publish a listing with photos, and a 
 | Visit booking (doc 28 item 3) | Built 2026-10-18 |
 | Lead response timer (doc 28 item 4) | Built 2026-10-19 |
 | Deal tracking (doc 28 item 5) | Built 2026-10-19 |
-| Locality landing pages | Not built; promoted to the pilot scope in doc 28 |
+| Locality landing pages (doc 28 item 7) | Built 2026-10-19 |
 | Services pages, maps, on-demand ISR | Deliberately not built (killable per doc 21) |
 | Production deployment | Not started |
 

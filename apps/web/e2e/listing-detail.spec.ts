@@ -48,7 +48,7 @@ test.describe('listing detail page', () => {
     await expect(overview).toContainText('Semi');
 
     const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
-    await expect(crumbs.getByRole('link', { name: 'Noida' })).toHaveAttribute('href', '/search?intent=RENT&city=noida');
+    await expect(crumbs.getByRole('link', { name: 'Noida' })).toHaveAttribute('href', '/rent/noida');
 
     // gallery: two photos, keyboard + buttons browse them
     const carousel = page.getByRole('region', { name: 'Property photos' });
