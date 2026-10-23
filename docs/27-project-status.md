@@ -108,7 +108,7 @@ Prefix `/api/v1`. Validation is Zod DTOs (also the source of truth for the web f
 | Public | `/`, `/search`, `/buy/[city]/[locality]/[slug]`, `/rent/[city]/[locality]/[slug]`, `/about`, `/contact`, `/privacy`, `/terms` |
 | Auth | `/login`, `/register`, `/forgot-password`, `/reset-password` |
 | Account | `/account`, `/account/enquiries`, `/account/saved` |
-| Admin | `/admin`, `/admin/properties` (+ `new`, `[id]`), `/admin/listings` (+ `new`, `[id]`), `/admin/leads` (+ `[id]`), `/admin/users` |
+| Admin | `/admin`, `/admin/properties` (+ `new`, `[id]`), `/admin/listings` (+ `new`, `[id]`), `/admin/leads` (+ `[id]`), `/admin/users` (+ `[id]`), `/admin/reports`, `/admin/audit`, `/admin/system`, `/admin/data-quality`, `/admin/visits`, `/admin/settings/fees` |
 | Generated | `sitemap.ts`, `robots.ts`, `not-found.tsx`, `error.tsx` |
 
 ### 5.2 Delivery phases (from doc 26)
@@ -124,6 +124,56 @@ Prefix `/api/v1`. Validation is Zod DTOs (also the source of truth for the web f
 | 6 | Enquiry and lead CRM: enquiry form (desktop card, mobile sheet), admin inbox, status workflow, assignment | Done |
 | 7 | Account and extras: profile, my enquiries, saved homes, dashboard counts, staff management | Done |
 | 8 | Hardening: CSP and security headers, no-store on signed-in pages, axe audits, CI with E2E | Done |
+
+### 5.3 Admin console upgrade
+
+Modelled on the admin area of the usort project (grouped sidebar, KPI cards, one consistent table and filter pattern, audit and health pages).
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| A1 | Look and feel: grouped sidebar, topbar with breadcrumb, admin-only dark mode (`data-admin-theme` on `<html>`, remembered in the browser), KPI cards, avatars, dashboard with a "needs attention" panel | Done |
+| A2 | Lists: shared filter bar (result count, clear filters), debounced search box, person cells with avatars, CSV export (leads), lead search by name, phone or email (`q` on `GET /admin/leads`) | Done |
+| A3 | Audit log page over the existing `audit_logs` table: `GET /admin/audit-logs` and `/admin/audit-logs/filters` (permission `audit.read`, admins only), filters by action, thing, person and dates, expandable rows, CSV export | Done |
+| A4 | Staff profile page `/admin/users/[id]` (`GET /admin/users/:id`, permission `user.manage`): account state, last active, devices signed in, assigned-lead numbers and median response time, latest leads, recent activity, disable and enable | Done |
+| A5 | System health page (`GET /admin/system/health`) and data-quality page (`GET /admin/system/data-quality`), both under permission `audit.read`, admins only | Done |
+| A6 | Reports page `/admin/reports` (`GET /admin/reports?from&to`, permission `lead.read_all`, fees section only with `finance.read`): funnel, enquiries per day, per-person table, sources, fees by month, CSV export of the tables | Done |
+
+Implementation notes (A1, A2):
+- Dark theme overrides the colour tokens on `<html>` rather than a wrapper, so dialogs and toasts (rendered in a portal) are themed too. The shell removes the attribute when it unmounts, so the public site is never dark.
+- The sidebar keeps the accessible names the E2E specs rely on (`Admin` navigation, `Key numbers` list, `Sign out`). The breadcrumb is a separate `Location` navigation.
+- CSV export pages through the same list call the table uses (the API serves 24 rows a page) and stops at 50 pages, then says so. Cells starting with `=`, `+`, `-` or `@` are prefixed with a quote so spreadsheets cannot run them as formulas.
+- Lead search is a case-insensitive contains on name and email and a contains on phone, and still respects the sales-agent scope (an agent only searches their own leads). The query needs at least 2 characters.
+- Tests: `admin-nav.test.ts`, `csv.test.ts`, an API spec case in `leads.sla.http.spec.ts`, and `e2e/admin-console.spec.ts`.
+
+Implementation notes (A3):
+- The log is read-only over HTTP: there is no write or delete route, and a test asserts that. Entries are still written only by the audit interceptor and by services (fee rules).
+- The date filters are calendar days in India time, and the last day is inclusive. A start date after the end date is shown as a message instead of an empty table.
+- Entries written by the interceptor carry a request ID in their details; entries written by a service (fee rule changes) carry their own details (old and new rule) instead.
+- Rows link to the lead, listing or property they are about when the admin area has a page for it. Visits, users and fee rules have no detail page yet, so no link.
+- The filter dropdowns only offer actions and people that have actually been logged (`/audit-logs/filters`, capped at 200 people).
+- Tests: `audit.http.spec.ts` (9 cases: filters, days, paging, bad input, admin-only, no write routes), `lib/audit.test.ts`, `e2e/audit-log.spec.ts`; the audit and visits pages were added to the admin accessibility audit.
+
+Implementation notes (A4):
+- "Last active" is when the person's newest session started or was refreshed. The database keeps no separate last-sign-in field, so this is an honest approximation, and it reads "Never" for someone with no session on record (including right after being disabled, because disabling deletes their sessions).
+- The numbers are about leads assigned to the person: total, still-new past the response target, won, and median first response over 30 days. Fee amounts and deal values are deliberately not in the profile.
+- Disable and enable follow the API's rules: not yourself, not a super admin, and only a super admin can change an admin. The button is hidden when the API would refuse. Enabling also clears a lockout.
+- Staff rows link to the profile, the profile links to `/admin/audit?actorId=` for the full history, and the leads list accepts `assigned=<user id>` as well as `assigned=me`.
+- Role changes are not built on purpose: promoting someone to admin is a privilege change and needs its own decision.
+- Tests: two cases in `admin-users.http.spec.ts`, `e2e/staff-detail.spec.ts`; the profile page is in the admin accessibility audit.
+
+Implementation notes (A5):
+- Health checks the database (`SELECT 1`) and photo storage (a bucket head request, added as `ping()` on the storage port), each with a 3 second timeout and its latency. Email is shown as information, not pass or fail: with no SMTP server set it says that password reset emails will not arrive. The page also shows environment, API uptime, Node version, the listing pause window, the lead response target and whether rate limiting is on. It never returns secrets or connection strings, and a test checks that.
+- Data quality runs six checks, most urgent first: new leads nobody owns, open leads held by someone who is disabled, locked or removed, visit requests waiting over a day, listings within 3 days of the automatic pause, published listings without a verified badge, and published listings with fewer than 3 photos. The 3 photo bar is a soft guideline (`MIN_GOOD_PHOTOS`); publishing itself needs one. Each issue shows its total and the oldest 10, with a link to fix each.
+- Both pages share `audit.read` rather than adding a new permission, so existing environments need no re-seed.
+- Tests: `system.http.spec.ts` (4 cases, with planted problems dated year 2000 so they sort first), `lib/system.test.ts`, `e2e/system.spec.ts`; both pages are in the admin accessibility audit.
+
+Implementation notes (A6):
+- Everything except fees is about the cohort of enquiries that arrived in the window (India time, last 30 days by default, at most 366 days), so every number traces back to the same set of leads. The funnel is Received, Answered (first response recorded), Asked to visit (has a visit request) and Won, so bars can only shrink.
+- "By person" groups that cohort by who holds each lead now, with an "Unassigned" row, plus median first response and still-waiting counts. Median is the same calculation as the dashboard.
+- Fees are grouped by the month the deal closed, not when the enquiry arrived, and are only in the response for people with `finance.read`. Sales agents are refused the whole report. Deals with no fee are flagged, not counted as zero fees silently.
+- Calculation lives in a pure function (`reports.compute.ts`) with its own unit tests. Reads are capped at 50,000 rows per report, far above the pilot.
+- The date range is in the URL (`from`, `to`), so a report can be shared. CSV export is done in the browser from the loaded tables.
+- Tests: `reports.compute.spec.ts` (11), `reports.http.spec.ts` (6, using a window in 2001 so counts are exact), `lib/reports.test.ts`, `e2e/reports.spec.ts`; the page is in the accessibility audit.
 
 ---
 

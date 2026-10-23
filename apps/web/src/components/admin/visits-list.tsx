@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/admin/data-table';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { PersonCell } from '@/components/admin/person-cell';
 import { PageHeader } from '@/components/admin/page-header';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/form-controls';
@@ -85,12 +86,7 @@ export function VisitsList() {
         header: 'Customer',
         cell: ({ row: { original: v } }) =>
           v.lead ? (
-            <div>
-              <Link href={`/admin/leads/${v.lead.id}`} className="font-medium text-ink hover:text-brand-700">
-                {v.lead.name}
-              </Link>
-              <p className="text-xs text-ink-subtle">{formatPhone(v.lead.phone)}</p>
-            </div>
+            <PersonCell name={v.lead.name} sub={formatPhone(v.lead.phone)} href={`/admin/leads/${v.lead.id}`} />
           ) : (
             <span className="text-ink-subtle">—</span>
           ),
@@ -140,16 +136,21 @@ export function VisitsList() {
         description={isAdmin(me) ? 'Visit requests from customers, soonest first.' : 'Visit requests on your assigned leads.'}
       />
 
-      <div className="mb-4 w-52">
-        <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {humanize(s)}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <FilterBar
+        summary={meta ? `${meta.total.toLocaleString('en-IN')} ${meta.total === 1 ? 'visit' : 'visits'}` : undefined}
+        onClear={status ? () => set({ status: null }) : undefined}
+      >
+        <div className="w-48">
+          <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {humanize(s)}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </FilterBar>
 
       <DataTable
         caption="Visits"

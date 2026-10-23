@@ -151,6 +151,15 @@ export class LeadsService {
     const where: Prisma.LeadWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.assignedTo ? { assignedToUserId: query.assignedTo } : {}),
+      ...(query.q
+        ? {
+            OR: [
+              { name: { contains: query.q, mode: 'insensitive' as const } },
+              { phone: { contains: query.q } },
+              { email: { contains: query.q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
       ...(query.overdue
         ? { status: 'NEW' as const, firstResponseAt: null, createdAt: { lt: overdueCutoff() } }
         : {}),

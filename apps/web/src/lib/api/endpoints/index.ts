@@ -12,7 +12,13 @@ import type {
   DashboardCounts,
   FeeRule,
   Intent,
+  AdminUserDetail,
+  DataQuality,
+  ReportsResponse,
+  SystemHealth,
   AdminVisit,
+  AuditEntry,
+  AuditFilters,
   CustomerLead,
   CustomerVisit,
   VisitSlot,
@@ -165,6 +171,7 @@ export const adminStaffApi = {
 
 export const adminUsersApi = {
   list: (query?: Q) => api<Paged<AdminUser>>('/api/v1/admin/users', { query }),
+  get: (id: string) => apiData<AdminUserDetail>(`/api/v1/admin/users/${id}`),
   createStaff: (body: { email: string; name: string; phone: string; password: string; role: 'SALES_AGENT' | 'ADMIN' }) =>
     apiData<AdminUser>('/api/v1/admin/users', { method: 'POST', body }),
   setStatus: (id: string, status: 'ACTIVE' | 'DISABLED') =>
@@ -182,4 +189,20 @@ export const savedApi = {
 
 export const dashboardApi = {
   get: () => apiData<DashboardCounts>('/api/v1/admin/dashboard'),
+};
+
+/* ───────────── audit log ───────────── */
+export const adminAuditApi = {
+  list: (query?: Q) => api<Paged<AuditEntry>>('/api/v1/admin/audit-logs', { query }),
+  filters: () => apiData<AuditFilters>('/api/v1/admin/audit-logs/filters'),
+};
+
+/* ───────────── system health and data quality ───────────── */
+export const adminSystemApi = {
+  health: () => apiData<SystemHealth>('/api/v1/admin/system/health'),
+  dataQuality: () => apiData<DataQuality>('/api/v1/admin/system/data-quality'),
+};
+
+export const adminReportsApi = {
+  get: (query?: Q) => apiData<ReportsResponse>('/api/v1/admin/reports', { query }),
 };

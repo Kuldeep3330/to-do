@@ -38,3 +38,24 @@ export type AdminUser = {
 };
 
 export type StaffMember = { id: string; name: string; email: string; roles: string[] };
+
+export type AdminUserDetail = AdminUser & {
+  emailVerified: boolean;
+  /** Set only while the account is temporarily locked after failed sign-ins. */
+  lockedUntil: string | null;
+  failedLoginCount: number;
+  /** When their newest session started or was refreshed; null if they have no session on record. */
+  lastActiveAt: string | null;
+  activeSessions: number;
+  /** Leads assigned to this person (nothing for customers). */
+  leads: {
+    total: number;
+    byStatus: Record<string, number>;
+    overdue: number;
+    won: number;
+    medianResponseMinutes: number | null;
+    responseTargetMinutes: number;
+  };
+  recentLeads: { id: string; name: string; status: string; createdAt: string; listingTitle: string | null }[];
+  recentActivity: { id: string; createdAt: string; action: string; entityType: string; entityId: string | null }[];
+};

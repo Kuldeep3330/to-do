@@ -12,4 +12,6 @@ export class InMemoryStorage implements StoragePort {
   async delete(key: string): Promise<void> {
     this.objects.delete(key);
   }
+
+  async ping(): Promise<void> {}
 }

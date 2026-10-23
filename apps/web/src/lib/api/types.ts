@@ -262,6 +262,26 @@ export type AdminUser = {
   roles: string[];
   createdAt: string;
 };
+/** One person's profile for the staff detail page. No money fields. */
+export type AdminUserDetail = AdminUser & {
+  phone: string;
+  emailVerified: boolean;
+  lockedUntil: string | null;
+  failedLoginCount: number;
+  /** When their newest session started or was refreshed; null if none on record. */
+  lastActiveAt: string | null;
+  activeSessions: number;
+  leads: {
+    total: number;
+    byStatus: Partial<Record<LeadStatus, number>>;
+    overdue: number;
+    won: number;
+    medianResponseMinutes: number | null;
+    responseTargetMinutes: number;
+  };
+  recentLeads: { id: string; name: string; status: LeadStatus; createdAt: string; listingTitle: string | null }[];
+  recentActivity: { id: string; createdAt: string; action: string; entityType: string; entityId: string | null }[];
+};
 export type StaffMember = { id: string; name: string; email: string; roles: string[] };
 
 export type DashboardCounts = {
@@ -282,4 +302,84 @@ export type DashboardCounts = {
   responseTargetMinutes: number;
   medianResponseMinutes: number | null;
   scopedToAssigned: boolean;
+};
+
+/** One line of the audit log: who did what to which thing, and when. */
+export type AuditEntry = {
+  id: string;
+  createdAt: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
+  /** Null for system actions or when the person has since been removed. */
+  actor: { id: string; name: string; email: string } | null;
+};
+
+/** What the audit log has actually recorded, for the filter dropdowns. */
+export type AuditFilters = {
+  actions: string[];
+  entityTypes: string[];
+  actors: { id: string; name: string; email: string }[];
+};
+
+export type HealthCheck = {
+  key: string;
+  label: string;
+  /** up: working. down: failing. info: how it is set up, not pass or fail. */
+  status: 'up' | 'down' | 'info';
+  latencyMs: number | null;
+  message: string;
+};
+export type SystemHealth = {
+  status: 'ok' | 'degraded';
+  checkedAt: string;
+  uptimeSeconds: number;
+  environment: string;
+  nodeVersion: string;
+  checks: HealthCheck[];
+  settings: { listingStaleDays: number; leadResponseMinutes: number; rateLimitEnabled: boolean };
+};
+
+export type QualityIssue = {
+  key: string;
+  title: string;
+  advice: string;
+  entity: 'listing' | 'lead' | 'visit';
+  /** What `at` means for these items, e.g. "received". */
+  atLabel: string | null;
+  severity: 'high' | 'medium' | 'low';
+  count: number;
+  items: { id: string; label: string; detail: string | null; at: string | null }[];
+};
+export type DataQuality = { checkedAt: string; totalIssues: number; issues: QualityIssue[] };
+
+export type ReportAgentRow = {
+  userId: string | null;
+  name: string;
+  received: number;
+  responded: number;
+  waiting: number;
+  medianResponseMinutes: number | null;
+  won: number;
+  winRatePercent: number | null;
+};
+export type ReportsResponse = {
+  from: string;
+  to: string;
+  days: number;
+  report: {
+    funnel: { key: 'received' | 'responded' | 'visit' | 'won'; label: string; count: number }[];
+    lost: number;
+    spam: number;
+    daily: { date: string; leads: number; won: number }[];
+    sources: { source: string; count: number }[];
+    agents: ReportAgentRow[];
+    medianResponseMinutes: number | null;
+  };
+  /** Null unless the viewer may see money. */
+  fees: {
+    months: { month: string; deals: number; rentMonthly: number; saleValue: number; fees: number; dealsWithoutFee: number }[];
+    totals: { deals: number; rentMonthly: number; saleValue: number; fees: number; dealsWithoutFee: number };
+  } | null;
 };

@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/admin/page-header';
 import { DataTable } from '@/components/admin/data-table';
+import { FilterBar, SearchBox } from '@/components/admin/filter-bar';
 import { ButtonLink } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/form-controls';
+import { Select } from '@/components/ui/form-controls';
 import { Pagination } from '@/components/ui/pagination';
 import { ListingStatusBadge } from '@/components/ui/status-badge';
 import { adminListingsApi } from '@/lib/api/endpoints';
@@ -27,14 +28,6 @@ export function ListingsList() {
   const intent = get('intent');
   const propertyId = get('propertyId');
   const q = get('q');
-
-  const [text, setText] = React.useState(q);
-  React.useEffect(() => setText(q), [q]);
-  React.useEffect(() => {
-    if (text === q) return;
-    const t = window.setTimeout(() => set({ q: text.trim().length >= 2 ? text.trim() : null }), 350);
-    return () => window.clearTimeout(t);
-  }, [text, q, set]);
 
   const query = useQuery({
     queryKey: ['admin', 'listings', { status, intent, propertyId, q, page }],
@@ -89,31 +82,29 @@ export function ListingsList() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" aria-hidden />
-          <Input
-            aria-label="Search listings"
-            placeholder="Search title"
-            className="pl-9"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+      <FilterBar
+        summary={meta ? `${meta.total.toLocaleString('en-IN')} ${meta.total === 1 ? 'listing' : 'listings'}` : undefined}
+        onClear={filtered ? () => set({ status: null, intent: null, q: null, propertyId: null }) : undefined}
+      >
+        <SearchBox label="Search listings" placeholder="Search title" value={q} onCommit={(v) => set({ q: v })} />
+        <div className="w-44">
+          <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
+            <option value="">All statuses</option>
+            {['DRAFT', 'PUBLISHED', 'PAUSED', 'CLOSED'].map((s) => (
+              <option key={s} value={s}>
+                {humanize(s)}
+              </option>
+            ))}
+          </Select>
         </div>
-        <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
-          <option value="">All statuses</option>
-          {['DRAFT', 'PUBLISHED', 'PAUSED', 'CLOSED'].map((s) => (
-            <option key={s} value={s}>
-              {humanize(s)}
-            </option>
-          ))}
-        </Select>
-        <Select aria-label="Filter by type" value={intent} onChange={(e) => set({ intent: e.target.value })}>
-          <option value="">Rent and sale</option>
-          <option value="RENT">Rent</option>
-          <option value="BUY">Sale</option>
-        </Select>
-      </div>
+        <div className="w-40">
+          <Select aria-label="Filter by type" value={intent} onChange={(e) => set({ intent: e.target.value })}>
+            <option value="">Rent and sale</option>
+            <option value="RENT">Rent</option>
+            <option value="BUY">Sale</option>
+          </Select>
+        </div>
+      </FilterBar>
 
       <DataTable
         caption="Listings"

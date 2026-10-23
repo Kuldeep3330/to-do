@@ -15,6 +15,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { AmenitiesModule } from './modules/amenities/amenities.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { SystemModule } from './modules/system/system.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { LocationsModule } from './modules/locations/locations.module';
@@ -52,6 +54,8 @@ import { PrismaModule } from './prisma/prisma.module';
     LeadsModule,
     SavedModule,
     DashboardModule,
+    ReportsModule,
+    SystemModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/admin/page-header';
 import { DataTable } from '@/components/admin/data-table';
+import { FilterBar, SearchBox } from '@/components/admin/filter-bar';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { Input, Select } from '@/components/ui/form-controls';
+import { Select } from '@/components/ui/form-controls';
 import { Pagination } from '@/components/ui/pagination';
 import { PropertyStatusBadge } from '@/components/ui/status-badge';
 import { useToast } from '@/components/ui/toast';
@@ -32,15 +33,6 @@ export function PropertiesList() {
   const type = get('type');
   const cityId = get('cityId');
   const q = get('q');
-
-  // Local text so typing is instant; URL (and thus the query) updates after a pause.
-  const [text, setText] = React.useState(q);
-  React.useEffect(() => setText(q), [q]);
-  React.useEffect(() => {
-    if (text === q) return;
-    const t = window.setTimeout(() => set({ q: text.trim().length >= 2 ? text.trim() : null }), 350);
-    return () => window.clearTimeout(t);
-  }, [text, q, set]);
 
   const cities = useCities();
   const cityName = React.useMemo(
@@ -132,36 +124,36 @@ export function PropertiesList() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" aria-hidden />
-          <Input
-            aria-label="Search properties"
-            placeholder="Search title or society"
-            className="pl-9"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+      <FilterBar
+        summary={meta ? `${meta.total.toLocaleString('en-IN')} ${meta.total === 1 ? 'property' : 'properties'}` : undefined}
+        onClear={q || type || cityId || get('status') ? () => set({ status: null, type: null, cityId: null, q: null }) : undefined}
+      >
+        <SearchBox label="Search properties" placeholder="Search title or society" value={q} onCommit={(v) => set({ q: v })} />
+        <div className="w-36">
+          <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
+            <option value="ACTIVE">Active</option>
+            <option value="ARCHIVED">Archived</option>
+          </Select>
         </div>
-        <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
-          <option value="ACTIVE">Active</option>
-          <option value="ARCHIVED">Archived</option>
-        </Select>
-        <Select aria-label="Filter by type" value={type} onChange={(e) => set({ type: e.target.value })}>
-          <option value="">All types</option>
-          <option value="RESIDENTIAL">Residential</option>
-          <option value="COMMERCIAL">Commercial</option>
-          <option value="PLOT">Plot</option>
-        </Select>
-        <Select aria-label="Filter by city" value={cityId} onChange={(e) => set({ cityId: e.target.value })}>
-          <option value="">All cities</option>
-          {cities.data?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-      </div>
+        <div className="w-40">
+          <Select aria-label="Filter by type" value={type} onChange={(e) => set({ type: e.target.value })}>
+            <option value="">All types</option>
+            <option value="RESIDENTIAL">Residential</option>
+            <option value="COMMERCIAL">Commercial</option>
+            <option value="PLOT">Plot</option>
+          </Select>
+        </div>
+        <div className="w-40">
+          <Select aria-label="Filter by city" value={cityId} onChange={(e) => set({ cityId: e.target.value })}>
+            <option value="">All cities</option>
+            {cities.data?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </FilterBar>
 
       <DataTable
         caption="Properties"

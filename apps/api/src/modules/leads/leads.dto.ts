@@ -31,6 +31,8 @@ export const createLeadSchema = z
 export const adminLeadListQuerySchema = paginationQuerySchema.extend({
   status: leadStatus.optional(),
   assignedTo: z.string().uuid().optional(),
+  /** Matches part of the enquirer's name, phone number or email. */
+  q: z.string().trim().min(2).max(80).optional(),
   /** "true" limits the list to leads still waiting past the response target. */
   overdue: z
     .enum(['true', 'false'])

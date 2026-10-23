@@ -9,6 +9,8 @@ import { Plus } from 'lucide-react';
 import { z } from 'zod';
 import { PageHeader } from '@/components/admin/page-header';
 import { DataTable } from '@/components/admin/data-table';
+import { FilterBar } from '@/components/admin/filter-bar';
+import { PersonCell } from '@/components/admin/person-cell';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog, Dialog, DialogContent } from '@/components/ui/dialog';
 import { Alert, Badge } from '@/components/ui/feedback';
@@ -149,10 +151,7 @@ export function UsersList() {
       {
         header: 'Name',
         cell: ({ row: { original: u } }) => (
-          <div>
-            <p className="font-medium">{u.name}</p>
-            <p className="text-xs text-ink-subtle">{u.email}</p>
-          </div>
+          <PersonCell name={u.name} sub={u.email} href={`/admin/users/${u.id}`} />
         ),
       },
       { header: 'Mobile', cell: ({ row }) => formatPhone(row.original.phone) },
@@ -198,20 +197,27 @@ export function UsersList() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Select aria-label="Filter by role" value={role} onChange={(e) => set({ role: e.target.value === 'STAFF' ? null : e.target.value })}>
-          <option value="STAFF">All staff</option>
-          <option value="SALES_AGENT">Sales agents</option>
-          <option value="ADMIN">Admins</option>
-          <option value="CUSTOMER">Customers</option>
-        </Select>
-        <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
-          <option value="">Any status</option>
-          <option value="ACTIVE">Active</option>
-          <option value="DISABLED">Disabled</option>
-          <option value="LOCKED">Locked</option>
-        </Select>
-      </div>
+      <FilterBar
+        summary={meta ? `${meta.total.toLocaleString('en-IN')} ${meta.total === 1 ? 'person' : 'people'}` : undefined}
+        onClear={get('role') || status ? () => set({ role: null, status: null }) : undefined}
+      >
+        <div className="w-44">
+          <Select aria-label="Filter by role" value={role} onChange={(e) => set({ role: e.target.value === 'STAFF' ? null : e.target.value })}>
+            <option value="STAFF">All staff</option>
+            <option value="SALES_AGENT">Sales agents</option>
+            <option value="ADMIN">Admins</option>
+            <option value="CUSTOMER">Customers</option>
+          </Select>
+        </div>
+        <div className="w-44">
+          <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
+            <option value="">Any status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="DISABLED">Disabled</option>
+            <option value="LOCKED">Locked</option>
+          </Select>
+        </div>
+      </FilterBar>
 
       <DataTable
         caption="Users"

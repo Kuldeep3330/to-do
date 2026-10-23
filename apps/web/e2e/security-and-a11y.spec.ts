@@ -109,6 +109,7 @@ test.describe('security headers and accessibility', () => {
 
   test('admin pages have no serious accessibility violations', async ({ page }) => {
     await loginAsAdmin(page);
+    const meId = ((await (await page.request.get('/api/v1/me')).json()).data as { id: string }).id;
     for (const [name, path, ready] of [
       ['dashboard', '/admin', 'Key numbers'],
       ['properties', '/admin/properties', null],
@@ -118,6 +119,12 @@ test.describe('security headers and accessibility', () => {
       ['leads', '/admin/leads', null],
       ['lead detail', `/admin/leads/${leadId}`, null],
       ['staff', '/admin/users', null],
+      ['audit log', '/admin/audit', null],
+      ['system health', '/admin/system', null],
+      ['data quality', '/admin/data-quality', null],
+      ['reports', '/admin/reports', null],
+      ['staff profile', `/admin/users/${meId}`, null],
+      ['visits', '/admin/visits', null],
     ] as const) {
       await page.goto(path);
       if (ready) await expect(page.getByRole('list', { name: ready })).toBeVisible();

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { Audit } from '../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -23,6 +23,16 @@ export class AdminUsersController {
   @Get('users')
   async list(@Query() query: AdminUserListQueryDto) {
     return this.users.list(query);
+  }
+
+  @RequirePermissions('user.manage')
+  @Get('users/:id')
+  @Header('Cache-Control', 'private, no-store')
+  async detail(@Param('id') id: string) {
+    if (!UUID.test(id)) {
+      throw AppError.notFound('User not found');
+    }
+    return { data: await this.users.detail(id) };
   }
 
   @RequirePermissions('user.manage')

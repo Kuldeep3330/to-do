@@ -63,6 +63,41 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * Admin dark theme. The admin shell sets data-admin-theme="dark" on <html> (not on a wrapper)
+ * so dialogs and toasts, which render in a portal, are themed too. The public site never sets it.
+ */
+html[data-admin-theme='dark'] {
+  color-scheme: dark;
+
+  --color-brand-50: #16254a;
+  --color-brand-100: #1b2f5e;
+  --color-brand-200: #274281;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #93c5fd;
+  --color-brand-800: #bfdbfe;
+
+  --color-surface: #131b2e;
+  --color-surface-muted: #0d1424;
+  --color-surface-sunken: #1b2540;
+  --color-border: #26324d;
+  --color-border-strong: #35445f;
+  --color-ink: #e6ebf5;
+  --color-ink-muted: #aab4c8;
+  --color-ink-subtle: #8591a8;
+
+  --color-success-50: #06281d;
+  --color-success-600: #34d399;
+  --color-warning-50: #2e2108;
+  --color-warning-600: #fbbf24;
+  --color-danger-50: #2f1114;
+  --color-danger-600: #ef4444;
+  --color-danger-700: #fca5a5;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 10px 30px rgb(0 0 0 / 0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

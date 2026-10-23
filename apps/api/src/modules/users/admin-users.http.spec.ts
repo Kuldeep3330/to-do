@@ -145,4 +145,66 @@ describe('admin users HTTP', () => {
     expect((await http().patch('/api/v1/admin/users/not-a-uuid').set('Cookie', superCookie).send({ status: 'ACTIVE' })).status).toBe(404);
     expect((await http().patch('/api/v1/admin/users/00000000-0000-4000-8000-000000000000').set('Cookie', superCookie).send({ status: 'ACTIVE' })).status).toBe(404);
   });
+
+  it('shows a profile for one person: sessions, lead performance and recent activity', async () => {
+    const body = newStaff(20, 'SALES_AGENT');
+    const made = await http().post('/api/v1/admin/users').set('Cookie', superCookie).send(body);
+    expect(made.status).toBe(201);
+    created.push(body.email);
+    const id = made.body.data.id as string;
+
+    // never signed in yet
+    const fresh = await http().get(`/api/v1/admin/users/${id}`).set('Cookie', superCookie);
+    expect(fresh.status).toBe(200);
+    expect(fresh.body.data).toMatchObject({ id, email: body.email, status: 'ACTIVE', lastActiveAt: null, activeSessions: 0 });
+    expect(fresh.body.data.leads).toMatchObject({ total: 0, overdue: 0, won: 0, medianResponseMinutes: null });
+    expect(fresh.body.data).not.toHaveProperty('passwordHash');
+
+    expect((await login(body.email, body.password)).status).toBe(200);
+    const hour = 3_600_000;
+    const leads = await prisma.$transaction([
+      prisma.lead.create({
+        data: { name: `Late ${suffix}`, phone: phone(21), assignedToUserId: id, status: 'NEW', createdAt: new Date(Date.now() - 6 * hour) },
+      }),
+      prisma.lead.create({
+        data: {
+          name: `Won ${suffix}`,
+          phone: phone(22),
+          assignedToUserId: id,
+          status: 'WON',
+          createdAt: new Date(Date.now() - 5 * hour),
+          firstResponseAt: new Date(Date.now() - 5 * hour + 30 * 60_000),
+        },
+      }),
+    ]);
+    await prisma.auditLog.create({ data: { actorUserId: id, action: 'UPDATE_LEAD', entityType: 'lead', entityId: leads[1].id } });
+
+    const res = await http().get(`/api/v1/admin/users/${id}`).set('Cookie', superCookie);
+    expect(res.status).toBe(200);
+    const d = res.body.data;
+    expect(d.lastActiveAt).toBeTruthy();
+    expect(d.activeSessions).toBe(1);
+    expect(d.leads).toMatchObject({ total: 2, overdue: 1, won: 1, medianResponseMinutes: 30 });
+    expect(d.leads.byStatus).toMatchObject({ NEW: 1, WON: 1 });
+    expect(d.recentLeads.map((l: { name: string }) => l.name)).toEqual([`Won ${suffix}`, `Late ${suffix}`]);
+    expect(d.recentActivity[0]).toMatchObject({ action: 'UPDATE_LEAD', entityType: 'lead', entityId: leads[1].id });
+    // money is not part of a person's profile
+    expect(JSON.stringify(d)).not.toMatch(/fee|closedAmount/i);
+
+    // disabling signs them out everywhere, and the profile says so
+    expect((await http().patch(`/api/v1/admin/users/${id}`).set('Cookie', superCookie).send({ status: 'DISABLED' })).status).toBe(200);
+    const after = await http().get(`/api/v1/admin/users/${id}`).set('Cookie', superCookie);
+    expect(after.body.data).toMatchObject({ status: 'DISABLED', activeSessions: 0 });
+
+    await prisma.auditLog.deleteMany({ where: { actorUserId: id } });
+    await prisma.lead.deleteMany({ where: { id: { in: leads.map((l) => l.id) } } });
+  });
+
+  it('refuses the profile to people without user management, and 404s unknown or malformed ids', async () => {
+    const someone = await prisma.user.findUniqueOrThrow({ where: { email: 'admin@example.com' } });
+    expect((await http().get(`/api/v1/admin/users/${someone.id}`)).status).toBe(401);
+    expect((await http().get(`/api/v1/admin/users/${someone.id}`).set('Cookie', customerCookie)).status).toBe(403);
+    expect((await http().get('/api/v1/admin/users/not-a-uuid').set('Cookie', superCookie)).status).toBe(404);
+    expect((await http().get('/api/v1/admin/users/00000000-0000-4000-8000-000000000000').set('Cookie', superCookie)).status).toBe(404);
+  });
 });

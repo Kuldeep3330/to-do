@@ -97,6 +97,23 @@ describe('lead response timer HTTP', () => {
     expect((await http().get('/api/v1/admin/leads?overdue=banana').set('Cookie', agentCookie)).status).toBe(400);
   });
 
+  it('searches leads by name, phone or email, and stays inside the agent scope', async () => {
+    const mine = await lead(6, 1, { name: `Zorbatron ${suffix}`, email: `zorba.${suffix}@example.com` });
+    const foreign = await prisma.lead.create({
+      data: { name: `Zorbatron ${suffix} Other`, phone: phone(77), status: 'NEW' },
+    });
+    const byName = await list(`?q=zorbatron%20${suffix}&pageSize=24`);
+    expect(byName.some((r) => r.id === mine.id)).toBe(true);
+    expect(byName.some((r) => r.id === foreign.id)).toBe(false); // not assigned to this agent
+    expect((await list(`?q=ZORBA.${suffix}&pageSize=24`)).some((r) => r.id === mine.id)).toBe(true);
+    expect((await list(`?q=${mine.phone.slice(-8)}&pageSize=24`)).some((r) => r.id === mine.id)).toBe(true);
+    expect(await list(`?q=nomatch-${suffix}-xyz`)).toHaveLength(0);
+
+    const admin = await http().get(`/api/v1/admin/leads?q=zorbatron%20${suffix}&pageSize=24`).set('Cookie', adminCookie);
+    expect((admin.body.data as { id: string }[]).map((r) => r.id)).toEqual(expect.arrayContaining([mine.id, foreign.id]));
+    expect((await http().get('/api/v1/admin/leads?q=a').set('Cookie', agentCookie)).status).toBe(400);
+  });
+
   it('records the first response when the lead leaves NEW, and stops being overdue', async () => {
     const waiting = await lead(5, 4);
     const res = await http().patch(`/api/v1/admin/leads/${waiting.id}`).set('Cookie', agentCookie).send({ status: 'CONTACTED' });

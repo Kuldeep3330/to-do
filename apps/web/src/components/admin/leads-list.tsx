@@ -1,12 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { DataTable } from '@/components/admin/data-table';
+import { ExportButton } from '@/components/admin/export-button';
+import { FilterBar, SearchBox } from '@/components/admin/filter-bar';
+import { PersonCell } from '@/components/admin/person-cell';
 import { ResponseBadge } from '@/components/admin/response-badge';
 import { Select } from '@/components/ui/form-controls';
 import { Pagination } from '@/components/ui/pagination';
@@ -26,19 +28,24 @@ export function LeadsList() {
   const { data: me } = useMe();
   const { get, set, page } = useUrlParams();
   const status = get('status');
-  const mine = get('assigned') === 'me';
+  const assignee = get('assigned');
+  const mine = assignee === 'me';
   const overdue = get('overdue') === 'true';
+  const q = get('q');
+
+  const fetchLeads = (p: number) =>
+    adminLeadsApi.list({
+      status,
+      q: q || undefined,
+      assignedTo: mine ? me?.id : assignee || undefined,
+      overdue: overdue ? 'true' : undefined,
+      page: p,
+      pageSize: PAGE_SIZE,
+    });
 
   const query = useQuery({
-    queryKey: ['admin', 'leads', { status, mine, overdue, page, me: me?.id }],
-    queryFn: () =>
-      adminLeadsApi.list({
-        status,
-        assignedTo: mine ? me?.id : undefined,
-        overdue: overdue ? 'true' : undefined,
-        page,
-        pageSize: PAGE_SIZE,
-      }),
+    queryKey: ['admin', 'leads', { status, assignee, overdue, q, page, me: me?.id }],
+    queryFn: () => fetchLeads(page),
     enabled: !mine || !!me,
     placeholderData: (prev) => prev,
   });
@@ -49,12 +56,7 @@ export function LeadsList() {
       {
         header: 'Contact',
         cell: ({ row: { original: l } }) => (
-          <div>
-            <Link href={`/admin/leads/${l.id}`} className="font-medium text-ink hover:text-brand-700">
-              {l.name}
-            </Link>
-            <p className="text-xs text-ink-subtle">{formatPhone(l.phone)}</p>
-          </div>
+          <PersonCell name={l.name} sub={formatPhone(l.phone)} href={`/admin/leads/${l.id}`} />
         ),
       },
       {
@@ -73,7 +75,7 @@ export function LeadsList() {
   );
 
   const meta = query.data?.meta;
-  const filtered = !!(status || mine || overdue);
+  const filtered = !!(status || assignee || overdue || q);
 
   return (
     <>
@@ -82,8 +84,31 @@ export function LeadsList() {
         description={isAdmin(me) ? 'Every enquiry from the public site.' : 'Enquiries assigned to you.'}
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="w-52">
+      <FilterBar
+        summary={meta ? `${meta.total.toLocaleString('en-IN')} ${meta.total === 1 ? 'lead' : 'leads'}` : undefined}
+        onClear={filtered ? () => set({ status: null, q: null, overdue: null, assigned: null }) : undefined}
+        actions={
+          <ExportButton
+            filename={`leads-${new Date().toISOString().slice(0, 10)}.csv`}
+            headers={['Received', 'Name', 'Phone', 'Email', 'Status', 'Source', 'Listing', 'Assigned to', 'First response (min)']}
+            toRow={(l: AdminLead) => [
+              l.createdAt,
+              l.name,
+              l.phone,
+              l.email,
+              humanize(l.status),
+              humanize(l.source),
+              l.listing?.title,
+              l.assignee?.name,
+              l.responseMinutes,
+            ]}
+            fetchPage={fetchLeads}
+            disabled={!meta || meta.total === 0}
+          />
+        }
+      >
+        <SearchBox label="Search leads" placeholder="Name, phone or email" value={q} onCommit={(v) => set({ q: v })} />
+        <div className="w-44">
           <Select aria-label="Filter by status" value={status} onChange={(e) => set({ status: e.target.value })}>
             <option value="">All statuses</option>
             {LEAD_STATUSES.map((s) => (
@@ -113,7 +138,7 @@ export function LeadsList() {
             Assigned to me
           </label>
         )}
-      </div>
+      </FilterBar>
 
       <DataTable
         caption="Leads"

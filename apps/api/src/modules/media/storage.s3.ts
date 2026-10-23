@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
 import { env } from '../../config/env';
 import { StoragePort } from './storage.port';
@@ -40,5 +40,9 @@ export class S3StorageAdapter implements StoragePort {
         Key: key,
       }),
     );
+  }
+
+  async ping(): Promise<void> {
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
   }
 }
