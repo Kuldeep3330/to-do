@@ -31,6 +31,8 @@ const PERMISSIONS = [
   'finance.manage',
   // Own inventory only (owners and agents). Full catalogue stays listing.manage.
   'listing.own',
+  // Community Insights polls: create, schedule, publish, close and archive.
+  'poll.manage',
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
@@ -63,6 +65,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'finance.read',
     'finance.manage',
     'listing.own',
+    'poll.manage',
   ],
   SUPER_ADMIN: PERMISSIONS,
 };
@@ -210,6 +213,53 @@ async function seedCatalog() {
   }
 }
 
+/** The initial Community Insights questions. They start as drafts: an admin decides when each one goes live. */
+const STARTER_POLLS: { question: string; options: string[] }[] = [
+  {
+    question: 'What is your biggest problem when searching for a property?',
+    options: ['Fake or outdated listings', 'High property prices', 'Unresponsive agents', 'Incomplete property details'],
+  },
+  {
+    question: 'What matters most when selecting a locality?',
+    options: ['Metro connectivity', 'Affordable price', 'Peaceful surroundings', 'Nearby facilities'],
+  },
+  {
+    question: 'What creates the most trust in a property listing?',
+    options: ['Recently confirmed availability', 'Real photographs', 'Verified agent identity', 'Clear pricing'],
+  },
+  { question: 'Which property type do you prefer?', options: ['Apartment', 'Builder Floor', 'Independent House', 'Villa'] },
+  {
+    question: 'What is your biggest rental concern?',
+    options: ['Security deposit', 'Brokerage', 'Maintenance charges', 'Property condition'],
+  },
+  {
+    question: 'What is your biggest concern when buying a property?',
+    options: ['Documentation', 'Price', 'Construction quality', 'Location'],
+  },
+  {
+    question: 'What do you expect most from an agent?',
+    options: ['Fast response', 'Honest information', 'Visit coordination', 'Price transparency'],
+  },
+  {
+    question: 'Would you consider a nearby locality for a better property?',
+    options: ['Definitely', 'Maybe', 'If connectivity is good', 'No'],
+  },
+];
+
+async function seedPolls() {
+  for (const [i, poll] of STARTER_POLLS.entries()) {
+    const exists = await prisma.communityPoll.findFirst({ where: { question: poll.question } });
+    if (exists) continue;
+    await prisma.communityPoll.create({
+      data: {
+        question: poll.question,
+        sortOrder: i,
+        options: { create: poll.options.map((label, position) => ({ label, position })) },
+      },
+    });
+  }
+}
+
 async function seedBootstrapAdmin() {
   const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.toLowerCase().trim();
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
@@ -252,6 +302,7 @@ async function seedBootstrapAdmin() {
 async function main() {
   await seedRbac();
   await seedCatalog();
+  await seedPolls();
   await seedBootstrapAdmin();
 }
 
