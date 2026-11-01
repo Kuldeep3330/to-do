@@ -9,7 +9,8 @@ test('owners can request a listing visit from the homepage', async ({ page }) =>
 
   await expect(page.getByRole('tab', { name: 'Help me list' })).toBeVisible();
   await page.getByRole('tab', { name: 'I will list it' }).click();
-  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+  // The header also has a "Sign in" link; the prompt this test is about is the one inside the page content.
+  await expect(page.getByRole('main').getByRole('link', { name: 'Sign in' })).toBeVisible();
   await page.getByRole('tab', { name: 'Help me list' }).click();
 
   await page.getByRole('button', { name: 'Request a visit from our team' }).click();
