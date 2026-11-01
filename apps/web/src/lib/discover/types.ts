@@ -92,3 +92,43 @@ export type DiscoverProfile = {
 };
 
 export type DiscoverStoredResult = DiscoverResult & { saved: boolean; createdAt: string };
+
+/* ───────────── community polls ───────────── */
+
+export type PollOptionResult = { optionId: string; label: string; count: number; percent: number };
+
+export type PollResults =
+  | { visible: true; total: number; options: PollOptionResult[] }
+  | { visible: false; total: number; needed: number };
+
+export type PublicPoll = {
+  id: string;
+  question: string;
+  phase: 'OPEN' | 'CLOSED';
+  opensAt: string | null;
+  closesAt: string | null;
+  options: Array<{ id: string; label: string }>;
+  results: PollResults;
+  votedOptionId: string | null;
+};
+
+export type PollInsights = {
+  id: string;
+  question: string;
+  phase: 'OPEN' | 'CLOSED';
+  results: PollResults;
+  byArea: Array<{ localityId: string; name: string; results: Extract<PollResults, { visible: true }> }>;
+  areasHeldBack: number;
+};
+
+export type AdminPoll = {
+  id: string;
+  question: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  phase: 'DRAFT' | 'SCHEDULED' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+  opensAt: string | null;
+  closesAt: string | null;
+  options: Array<{ id: string; label: string; count: number }>;
+  total: number;
+  createdAt: string;
+};

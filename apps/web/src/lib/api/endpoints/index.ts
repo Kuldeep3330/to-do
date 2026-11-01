@@ -1,11 +1,14 @@
 import { api, apiData } from '../client';
 import type {
+  AdminPoll,
   DiscoverAnswers,
   DiscoverDefinition,
   DiscoverProfile,
   DiscoverSlug,
   DiscoverStoredResult,
   DiscoverSubmitResponse,
+  PollInsights,
+  PublicPoll,
 } from '@/lib/discover/types';
 import type {
   AdminLead,
@@ -222,6 +225,26 @@ export const discoverApi = {
     apiData<{ saved: true }>(`/api/v1/discover/results/${encodeURIComponent(token)}/claim`, { method: 'POST' }),
   profile: () => apiData<DiscoverProfile | null>('/api/v1/discover/me/profile'),
   deleteMine: () => api<unknown>('/api/v1/discover/me', { method: 'DELETE' }),
+};
+
+/* ───────────── community polls ───────────── */
+export const communityApi = {
+  list: () => apiData<PublicPoll[]>('/api/v1/community/polls'),
+  vote: (pollId: string, body: { optionId: string; localityId?: string }) =>
+    apiData<PublicPoll>(`/api/v1/community/polls/${pollId}/vote`, { method: 'POST', body }),
+  insights: (pollId: string) => apiData<PollInsights>(`/api/v1/community/polls/${pollId}/insights`),
+};
+
+export type PollInput = { question: string; options: string[]; opensAt?: string | null; closesAt?: string | null };
+
+export const adminPollsApi = {
+  list: () => apiData<AdminPoll[]>('/api/v1/admin/community/polls'),
+  create: (body: PollInput) => apiData<{ id: string }>('/api/v1/admin/community/polls', { method: 'POST', body }),
+  update: (id: string, body: Partial<PollInput>) =>
+    apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}`, { method: 'PATCH', body }),
+  publish: (id: string) => apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}/publish`, { method: 'POST' }),
+  close: (id: string) => apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}/close`, { method: 'POST' }),
+  archive: (id: string) => apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}/archive`, { method: 'POST' }),
 };
 
 /* ───────────── admin staff / users ───────────── */

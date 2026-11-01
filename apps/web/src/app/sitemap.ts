@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: abs('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: abs(searchHref({ intent: 'BUY' })), changeFrequency: 'daily', priority: 0.8 },
     { url: abs(searchHref({ intent: 'RENT' })), changeFrequency: 'daily', priority: 0.8 },
-    ...['/about', '/contact', '/list-property', '/discover', '/discover/customer', '/discover/owner', '/discover/agent', '/privacy', '/terms'].map((p) => ({
+    ...['/about', '/contact', '/list-property', '/discover', '/discover/customer', '/discover/owner', '/discover/agent', '/discover/community', '/privacy', '/terms'].map((p) => ({
       url: abs(p),
       changeFrequency: 'yearly' as const,
       priority: 0.3,

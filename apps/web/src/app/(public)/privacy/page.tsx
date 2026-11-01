@@ -42,6 +42,13 @@ export default function PrivacyPage() {
           agent.
         </li>
       </ul>
+      <p>
+        Community Insights polls work the same way without an account. When you vote we set a random cookie in your
+        browser and store a one-way code made from it and the poll, so we can limit repeat votes. The code cannot be
+        linked across polls or to you, and we do not store your name or contact details with a vote. If you choose to add
+        your area, it is used only for combined results, which are shown for an area once enough people there have
+        voted. We do not show individual votes.
+      </p>
       <h2>Your choices</h2>
       <p>You can ask us to correct or delete your information by contacting us through the Contact page.</p>
     </StaticPage>

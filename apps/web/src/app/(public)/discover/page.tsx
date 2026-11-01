@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Building2, Home, Users } from 'lucide-react';
-import { Badge, Card } from '@/components/ui/feedback';
+import { Card } from '@/components/ui/feedback';
 
 export const metadata: Metadata = {
   title: 'NCR Homes Discover',
@@ -75,7 +75,13 @@ export default function DiscoverPage() {
           <h2 className="text-lg font-semibold">Community Insights</h2>
           <p className="mt-1 text-sm text-ink-muted">Quick polls on what matters most when finding a home in Delhi-NCR.</p>
         </div>
-        <Badge tone="neutral">Coming soon</Badge>
+        <Link
+          href="/discover/community"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline"
+          aria-label="Open Community Insights polls"
+        >
+          Vote and see results <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
       </Card>
 
       <p className="mt-8 max-w-3xl text-sm text-ink-subtle">
