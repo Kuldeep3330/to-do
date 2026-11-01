@@ -1,5 +1,13 @@
 import { api, apiData } from '../client';
 import type {
+  DiscoverAnswers,
+  DiscoverDefinition,
+  DiscoverProfile,
+  DiscoverSlug,
+  DiscoverStoredResult,
+  DiscoverSubmitResponse,
+} from '@/lib/discover/types';
+import type {
   AdminLead,
   AdminUser,
   StaffMember,
@@ -201,6 +209,19 @@ export const publicApi = {
     email?: string;
     message?: string;
   }) => api<{ data: { ok: true } }>('/api/v1/owner-enquiries', { method: 'POST', body }),
+};
+
+/* ───────────── discover ───────────── */
+export const discoverApi = {
+  definition: (slug: DiscoverSlug) => apiData<DiscoverDefinition>(`/api/v1/discover/assessments/${slug}`),
+  start: (slug: DiscoverSlug) => api<unknown>(`/api/v1/discover/assessments/${slug}/start`, { method: 'POST' }),
+  submit: (slug: DiscoverSlug, body: { answers: DiscoverAnswers; saveToAccount?: boolean }) =>
+    apiData<DiscoverSubmitResponse>(`/api/v1/discover/assessments/${slug}/responses`, { method: 'POST', body }),
+  result: (token: string) => apiData<DiscoverStoredResult>(`/api/v1/discover/results/${encodeURIComponent(token)}`),
+  claim: (token: string) =>
+    apiData<{ saved: true }>(`/api/v1/discover/results/${encodeURIComponent(token)}/claim`, { method: 'POST' }),
+  profile: () => apiData<DiscoverProfile | null>('/api/v1/discover/me/profile'),
+  deleteMine: () => api<unknown>('/api/v1/discover/me', { method: 'DELETE' }),
 };
 
 /* ───────────── admin staff / users ───────────── */

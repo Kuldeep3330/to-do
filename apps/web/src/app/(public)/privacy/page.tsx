@@ -18,6 +18,30 @@ export default function PrivacyPage() {
         <li>To run your account, including saved homes and your enquiry history.</li>
         <li>To protect the site against abuse.</li>
       </ul>
+      <h2>NCR Homes Discover</h2>
+      <p>
+        Discover is a set of short assessments for home seekers, owners and agents. You do not need an account to use
+        it, and it does not ask for your name, mobile number or email address.
+      </p>
+      <ul>
+        <li>
+          We store your answers and the result we calculate. If you do not save the result to an account, the record is
+          not linked to you. Anyone who has your result link can open it, so keep the link private.
+        </li>
+        <li>
+          If you save a result to your account, it is linked to your account. You can delete it, and your saved home
+          preferences, at any time from My account, under My preferences.
+        </li>
+        <li>
+          We use answers to prepare your result and, in combined form, to understand what people in Delhi-NCR are
+          looking for and to improve search and listing quality. We do not show individual answers publicly, and we do
+          not use them for unrelated marketing.
+        </li>
+        <li>
+          Answers are self-reported. A Discover result is not advice, and it does not verify a property, an owner or an
+          agent.
+        </li>
+      </ul>
       <h2>Your choices</h2>
       <p>You can ask us to correct or delete your information by contacting us through the Contact page.</p>
     </StaticPage>

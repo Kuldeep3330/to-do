@@ -169,6 +169,8 @@ model User {
   createdListings  Listing[]            @relation("ListingCreator")
   savedListings    SavedListing[]
   auditLogs        AuditLog[]
+  discoverResponses DiscoverResponse[]
+  discoverProfile  DiscoverPreferenceProfile?
 
   @@map("users")
 }
@@ -505,6 +507,47 @@ model AuditLog {
   @@index([entityType, entityId, createdAt(sort: Desc)])
   @@index([actorUserId, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+enum DiscoverKind {
+  CUSTOMER
+  OWNER
+  AGENT
+
+  @@map("discover_kind")
+}
+
+/// One completed Discover assessment. Anonymous by default: `userId` is only set when the participant chooses to save it.
+/// The result is retrieved with an unguessable token; only its hash is stored.
+model DiscoverResponse {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind      DiscoverKind
+  version   Int
+  tokenHash String       @unique @map("token_hash") @db.Char(64)
+  userId    String?      @map("user_id") @db.Uuid
+  answers   Json
+  result    Json
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([kind, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("discover_responses")
+}
+
+/// A signed-in customer's saved Home Preference Profile (one per user). Locations are referenced by id, never copied.
+model DiscoverPreferenceProfile {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  version     Int
+  preferences Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("discover_preference_profiles")
 }
 
 model AnalyticsEvent {
