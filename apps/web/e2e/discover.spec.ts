@@ -48,7 +48,7 @@ test.describe('Discover', () => {
     await expect(page.getByRole('link', { name: /start: find your home preferences/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /start: is your property ready/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /start: agent service profile/i })).toBeVisible();
-    await expect(page.getByText('Coming soon')).toBeVisible();
+    await expect(page.getByRole('link', { name: /vote and see results/i })).toHaveAttribute('href', '/discover/community');
     await expectNoA11yViolations(page, 'discover landing');
   });
 

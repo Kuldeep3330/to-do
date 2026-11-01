@@ -78,7 +78,7 @@ export default function DiscoverPage() {
         <Link
           href="/discover/community"
           className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline"
-          aria-label="Open Community Insights polls"
+          aria-label="Vote and see results: Community Insights polls"
         >
           Vote and see results <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
