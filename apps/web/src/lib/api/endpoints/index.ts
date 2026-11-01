@@ -56,11 +56,42 @@ export const meApi = {
   cancelVisit: (id: string) => apiData<CustomerVisit>(`/api/v1/me/visits/${id}/cancel`, { method: 'POST' }),
 };
 
+export const mePropertiesApi = {
+  list: (query?: Q) => api<Paged<AdminProperty>>('/api/v1/me/properties', { query }),
+  get: (id: string) => apiData<AdminProperty>(`/api/v1/me/properties/${id}`),
+  create: (body: PropertyInput) => apiData<AdminProperty>('/api/v1/me/properties', { method: 'POST', body }),
+  update: (id: string, body: PropertyInput) =>
+    apiData<AdminProperty>(`/api/v1/me/properties/${id}`, { method: 'PATCH', body }),
+};
+
+export const meListingsApi = {
+  list: (query?: Q) => api<Paged<AdminListing>>('/api/v1/me/listings', { query }),
+  get: (id: string) => apiData<AdminListingDetail>(`/api/v1/me/listings/${id}`),
+  create: (body: ListingInput) => apiData<AdminListing>('/api/v1/me/listings', { method: 'POST', body }),
+  update: (id: string, body: ListingInput) =>
+    apiData<AdminListing>(`/api/v1/me/listings/${id}`, { method: 'PATCH', body }),
+  publish: (id: string) => apiData<AdminListing>(`/api/v1/me/listings/${id}/publish`, { method: 'POST' }),
+  pause: (id: string) => apiData<AdminListing>(`/api/v1/me/listings/${id}/pause`, { method: 'POST' }),
+  close: (id: string) => apiData<AdminListing>(`/api/v1/me/listings/${id}/close`, { method: 'POST' }),
+};
+
+export const meMediaApi = {
+  upload: (listingId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiData<AdminMedia>(`/api/v1/me/listings/${listingId}/media`, { method: 'POST', form });
+  },
+  update: (id: string, body: { sortOrder: number }) =>
+    apiData<AdminMedia>(`/api/v1/me/media/${id}`, { method: 'PATCH', body }),
+  remove: (id: string) => api<void>(`/api/v1/me/media/${id}`, { method: 'DELETE' }),
+};
+
 /* ───────────── locations (Phase 2) ───────────── */
 export const locationsApi = {
   cities: () => apiData<City[]>('/api/v1/cities'),
   localities: (citySlug: string) => apiData<Locality[]>(`/api/v1/cities/${citySlug}/localities`),
   amenities: () => apiData<Amenity[]>('/api/v1/admin/amenities'),
+  publicAmenities: () => apiData<Amenity[]>('/api/v1/amenities'),
 };
 
 /* ───────────── admin properties ───────────── */
@@ -161,6 +192,15 @@ export const publicApi = {
     email?: string;
     message?: string;
   }) => api<{ data: { ok: true } }>('/api/v1/leads', { method: 'POST', body }),
+  createOwnerEnquiry: (body: {
+    intent: 'BUY' | 'RENT';
+    city: string;
+    locality?: string;
+    name: string;
+    phone: string;
+    email?: string;
+    message?: string;
+  }) => api<{ data: { ok: true } }>('/api/v1/owner-enquiries', { method: 'POST', body }),
 };
 
 /* ───────────── admin staff / users ───────────── */

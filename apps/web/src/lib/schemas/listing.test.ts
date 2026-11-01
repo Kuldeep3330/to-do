@@ -78,6 +78,7 @@ const listing = (over: Partial<AdminListing> = {}): AdminListing => ({
   verifiedBy: null,
   lastConfirmedAt: null,
   originalCount: 2,
+  createdByUserId: null,
   property: {
     id: uuid,
     type: 'RESIDENTIAL',

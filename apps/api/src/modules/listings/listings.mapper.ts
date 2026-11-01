@@ -46,6 +46,7 @@ export type ListingRow = {
   verifiedAt?: Date | null;
   lastConfirmedAt?: Date | null;
   verifiedBy?: { name: string } | null;
+  createdByUserId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   property: PropertyRow;
@@ -97,6 +98,7 @@ export type AdminListing = {
   verifiedBy: string | null;
   lastConfirmedAt: string | null;
   originalCount: number;
+  createdByUserId: string | null;
   property: {
     id: string;
     type: string;
@@ -134,6 +136,7 @@ export function toAdminListing(row: ListingRow): AdminListing {
     verifiedBy: row.verifiedBy?.name ?? null,
     lastConfirmedAt: iso(row.lastConfirmedAt),
     originalCount: row.media?.length ?? 0,
+    createdByUserId: row.createdByUserId ?? null,
     property: {
       id: row.property.id,
       type: row.property.type,

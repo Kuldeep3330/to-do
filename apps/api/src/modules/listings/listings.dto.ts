@@ -56,6 +56,7 @@ export const adminListingListQuerySchema = paginationQuerySchema.extend({
   intent: intent.optional(),
   status: z.enum(['DRAFT', 'PUBLISHED', 'PAUSED', 'CLOSED']).optional(),
   q: z.string().min(2).max(80).optional(),
+  unverified: z.enum(['true']).optional(),
 });
 
 export const searchListingsQuerySchema = paginationQuerySchema.extend({

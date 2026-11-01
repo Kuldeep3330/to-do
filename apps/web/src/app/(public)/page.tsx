@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BadgeCheck, Camera, Headset, Search } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Camera, Headset, Home, Search } from 'lucide-react';
 import { ListingGrid } from '@/components/listing/listing-card';
 import { ButtonLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/feedback';
@@ -19,7 +19,7 @@ const selectClass =
   'h-12 w-full appearance-none rounded-lg border border-border-strong bg-surface px-3 text-sm text-ink focus-visible:border-brand-600';
 
 const TRUST = [
-  { icon: BadgeCheck, title: 'Verified listings', text: 'Every property is checked by our team before it goes live.' },
+  { icon: BadgeCheck, title: 'Verified listings', text: 'Our team visits every home within 2 days. Listings that are not genuine are paused.' },
   { icon: Camera, title: 'Real photos', text: 'Listings need real photos and a real price. No bait and switch.' },
   { icon: Headset, title: 'A person to help', text: 'Send an enquiry and our team calls you back, usually the same day.' },
 ];
@@ -92,6 +92,13 @@ export default async function HomePage() {
               Search
             </button>
           </form>
+          <p className="mt-6 text-sm text-ink-muted">
+            Own a home in Delhi-NCR?{' '}
+            <Link href="/list-property" className="font-medium text-brand-700 hover:underline">
+              List it yourself or ask us to visit
+            </Link>
+            . We check every listing within 2 days.
+          </p>
         </div>
       </section>
 
@@ -155,6 +162,28 @@ export default async function HomePage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="bg-brand-50" aria-labelledby="owners-heading">
+        <div className="mx-auto flex max-w-5xl flex-col items-start gap-6 px-4 py-12 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex gap-4">
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-brand-600 shadow-card">
+              <Home className="h-6 w-6" aria-hidden />
+            </span>
+            <div>
+              <h2 id="owners-heading" className="text-2xl font-bold tracking-tight">
+                List your property
+              </h2>
+              <p className="mt-1 max-w-xl text-sm text-ink-muted">
+                Owners and landlords: list it yourself, or ask us to visit. We photograph and check every home within 2
+                days. Enquiries come to one person, not a crowd of brokers.
+              </p>
+            </div>
+          </div>
+          <ButtonLink href="/list-property" size="lg" className="shrink-0">
+            List your property
+          </ButtonLink>
+        </div>
       </section>
     </>
   );

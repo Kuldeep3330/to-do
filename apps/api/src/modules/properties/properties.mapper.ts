@@ -21,6 +21,7 @@ export type AdminProperty = {
   parkingCount: number | null;
   internalTitle: string;
   amenityIds: string[];
+  createdByUserId: string | null;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +49,7 @@ export type PropertyRow = {
   ageYears: number | null;
   parkingCount: number | null;
   internalTitle: string;
+  createdByUserId?: string | null;
   amenities: { amenityId: string }[];
   deletedAt: Date | null;
   createdAt: Date;
@@ -85,6 +87,7 @@ export function toAdminProperty(row: PropertyRow): AdminProperty {
     parkingCount: row.parkingCount,
     internalTitle: row.internalTitle,
     amenityIds: row.amenities.map((a) => a.amenityId),
+    createdByUserId: row.createdByUserId ?? null,
     deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

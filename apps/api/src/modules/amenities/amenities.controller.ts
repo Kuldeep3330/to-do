@@ -1,9 +1,22 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Patch, Post } from '@nestjs/common';
 import { Audit } from '../../common/decorators/audit.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { AppError } from '../../common/errors/app-error';
 import { AmenitiesService } from './amenities.service';
 import { CreateAmenityDto, PatchAmenityDto } from './amenities.dto';
+
+@Controller('api/v1/amenities')
+export class PublicAmenitiesController {
+  constructor(private readonly amenities: AmenitiesService) {}
+
+  @Public()
+  @Get()
+  @Header('Cache-Control', 'public, max-age=60')
+  async list() {
+    return { data: await this.amenities.listActive() };
+  }
+}
 
 @Controller('api/v1/admin/amenities')
 export class AmenitiesController {

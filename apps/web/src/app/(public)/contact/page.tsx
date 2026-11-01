@@ -30,9 +30,18 @@ export default function ContactPage() {
           )}
         </ul>
       )}
-      <ButtonLink href="/search" className="no-underline">
-        Browse homes
-      </ButtonLink>
+      <p>
+        To list a home you own, use <a href="/list-property">List your property</a>. List it yourself or ask our team to
+        visit. We check every listing within 2 days.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <ButtonLink href="/search" className="no-underline">
+          Browse homes
+        </ButtonLink>
+        <ButtonLink href="/list-property" variant="outline" className="no-underline">
+          List your property
+        </ButtonLink>
+      </div>
     </StaticPage>
   );
 }

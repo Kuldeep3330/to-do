@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { env } from '../../config/env';
-import { ListingMediaController, MediaController } from './media.controller';
+import {
+  ListingMediaController,
+  MeListingMediaController,
+  MeMediaController,
+  MediaController,
+} from './media.controller';
 import { MediaService } from './media.service';
 import { InMemoryStorage } from './storage.memory';
 import { STORAGE_PORT } from './storage.port';
 import { S3StorageAdapter } from './storage.s3';
 
 @Module({
-  controllers: [ListingMediaController, MediaController],
+  controllers: [ListingMediaController, MeListingMediaController, MeMediaController, MediaController],
   providers: [
     MediaService,
     {

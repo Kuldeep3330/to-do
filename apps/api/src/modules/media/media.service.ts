@@ -33,6 +33,42 @@ export class MediaService {
     @Inject(STORAGE_PORT) private readonly storage: StoragePort,
   ) {}
 
+  async uploadOwned(listingId: string, userId: string, file: UploadFile | undefined) {
+    await this.assertListingOwned(listingId, userId);
+    return this.upload(listingId, file);
+  }
+
+  async patchSortOrderOwned(id: string, userId: string, sortOrder: number) {
+    await this.assertMediaOwned(id, userId);
+    return this.patchSortOrder(id, sortOrder);
+  }
+
+  async removeOwned(id: string, userId: string) {
+    await this.assertMediaOwned(id, userId);
+    return this.remove(id);
+  }
+
+  private async assertListingOwned(listingId: string, userId: string): Promise<void> {
+    const listing = await this.prisma.listing.findFirst({
+      where: { id: listingId, createdByUserId: userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!listing) {
+      throw AppError.notFound('Listing not found');
+    }
+  }
+
+  private async assertMediaOwned(id: string, userId: string): Promise<void> {
+    const row = await this.prisma.media.findFirst({
+      where: { id },
+      select: { listingId: true },
+    });
+    if (!row) {
+      throw AppError.notFound('Media not found');
+    }
+    await this.assertListingOwned(row.listingId, userId);
+  }
+
   async upload(listingId: string, file: UploadFile | undefined): Promise<{
     data: AdminMedia & { variants: AdminMedia[] };
   }> {

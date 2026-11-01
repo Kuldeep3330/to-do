@@ -14,6 +14,14 @@ export class AmenitiesService {
     return this.prisma.amenity.findMany({ orderBy: { name: 'asc' } });
   }
 
+  listActive() {
+    return this.prisma.amenity.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, code: true, name: true },
+    });
+  }
+
   async create(input: CreateAmenityInput) {
     try {
       return await this.prisma.amenity.create({ data: input });

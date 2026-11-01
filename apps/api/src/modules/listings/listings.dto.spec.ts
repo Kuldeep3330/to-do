@@ -63,6 +63,12 @@ describe('listing DTOs', () => {
     expect(parsed.pageSize).toBe(24);
   });
 
+  it('accepts unverified=true on the admin list query', () => {
+    const parsed = adminListingListQuerySchema.parse({ unverified: 'true' });
+    expect(parsed.unverified).toBe('true');
+    expect(adminListingListQuerySchema.safeParse({ unverified: 'false' }).success).toBe(false);
+  });
+
   it('defaults public search pagination and sort', () => {
     const parsed = searchListingsQuerySchema.parse({});
     expect(parsed.page).toBe(1);

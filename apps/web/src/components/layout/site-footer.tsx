@@ -8,6 +8,7 @@ const COLUMNS = [
       { href: '/search?intent=BUY', label: 'Buy a home' },
       { href: '/search?intent=RENT', label: 'Rent a home' },
       { href: '/search?type=COMMERCIAL', label: 'Commercial' },
+      { href: '/list-property', label: 'List your property' },
     ],
   },
   {

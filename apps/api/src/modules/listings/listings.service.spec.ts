@@ -22,6 +22,7 @@ function listingRow(overrides: Record<string, unknown> = {}) {
     availableFrom: null,
     publishedAt: null,
     closedAt: null,
+    createdByUserId: null,
     createdAt: new Date('2026-10-01T00:00:00.000Z'),
     updatedAt: new Date('2026-10-01T00:00:00.000Z'),
     media: [],
@@ -287,6 +288,30 @@ describe('ListingsService', () => {
         }),
         orderBy: [{ priceAmount: 'asc' }, { id: 'desc' }],
         take: 12,
+      }),
+    );
+  });
+
+  it('createOwned rejects a property the user does not own', async () => {
+    prisma.property.findFirst.mockResolvedValue(null);
+    await expect(
+      service.createOwned('user-1', {
+        propertyId,
+        intent: 'RENT',
+        title: 'x',
+        pricePeriod: 'MONTHLY',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR', status: 400 });
+  });
+
+  it('listAdmin filters unverified listings', async () => {
+    prisma.$transaction.mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops));
+    prisma.listing.findMany.mockResolvedValue([]);
+    prisma.listing.count.mockResolvedValue(0);
+    await service.listAdmin({ page: 1, pageSize: 24, unverified: 'true' });
+    expect(prisma.listing.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ verifiedAt: null, deletedAt: null }),
       }),
     );
   });

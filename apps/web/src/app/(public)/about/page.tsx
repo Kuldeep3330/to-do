@@ -12,8 +12,8 @@ export default function AboutPage() {
     <StaticPage title="About NCR Homes" intro="Finding a home in Delhi-NCR should not feel like a gamble.">
       <p>
         NCR Homes lists apartments, houses and commercial spaces to buy or rent across Delhi, Noida, Gurugram,
-        Ghaziabad and Faridabad. Every listing is added by our own team, so you see real photos, a real price and the
-        real locality.
+        Ghaziabad and Faridabad. Owners can list a home themselves or ask our team to visit. We check every listing
+        within 2 days, so you see real photos, a real price and the real locality.
       </p>
       <h2>How it works</h2>
       <ul>
@@ -21,6 +21,11 @@ export default function AboutPage() {
         <li>Open a listing to see photos, details and the price.</li>
         <li>Send an enquiry and our team calls you back to arrange a visit.</li>
       </ul>
+      <h2>For owners</h2>
+      <p>
+        If you want your home on NCR Homes, <a href="/list-property">list it yourself or ask us to visit</a>. A person
+        from our team visits within 2 days. Listings that are not genuine are paused.
+      </p>
     </StaticPage>
   );
 }

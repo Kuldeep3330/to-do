@@ -61,7 +61,7 @@ export class PropertiesService {
     return toAdminProperty(row);
   }
 
-  async create(input: CreatePropertyInput) {
+  async create(input: CreatePropertyInput, createdByUserId?: string) {
     const { amenityIds, ...fields } = input;
     await this.assertLocalityInCity(fields.localityId, fields.cityId);
     await this.assertAmenities(amenityIds);
@@ -69,6 +69,7 @@ export class PropertiesService {
       const row = await this.prisma.property.create({
         data: {
           ...fields,
+          ...(createdByUserId ? { createdByUserId } : {}),
           ...(amenityIds && amenityIds.length > 0
             ? { amenities: { create: amenityIds.map((amenityId) => ({ amenityId })) } }
             : {}),
@@ -79,6 +80,64 @@ export class PropertiesService {
     } catch (e) {
       this.mapPrismaWriteError(e);
     }
+  }
+
+  async listMine(userId: string, query: PropertyListQueryDto) {
+    const where: Prisma.PropertyWhereInput = {
+      createdByUserId: userId,
+      ...(query.status === 'ARCHIVED' ? {} : { deletedAt: null }),
+      ...(query.cityId ? { cityId: query.cityId } : {}),
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.q
+        ? {
+            OR: [
+              { internalTitle: { contains: query.q, mode: 'insensitive' } },
+              { societyName: { contains: query.q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.property.findMany({
+        where,
+        include: WITH_AMENITIES,
+        orderBy: { createdAt: 'desc' },
+        skip: offsetOf(query.page, query.pageSize),
+        take: query.pageSize,
+      }),
+      this.prisma.property.count({ where }),
+    ]);
+    return {
+      data: rows.map(toAdminProperty),
+      meta: { page: query.page, pageSize: query.pageSize, total },
+    };
+  }
+
+  async getOwned(id: string, userId: string) {
+    const row = await this.prisma.property.findFirst({
+      where: { id, createdByUserId: userId, deletedAt: null },
+      include: WITH_AMENITIES,
+    });
+    if (!row) {
+      throw AppError.notFound('Property not found');
+    }
+    return toAdminProperty(row);
+  }
+
+  async assertOwned(id: string, userId: string): Promise<void> {
+    const row = await this.prisma.property.findFirst({
+      where: { id, createdByUserId: userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!row) {
+      throw AppError.notFound('Property not found');
+    }
+  }
+
+  async patchOwned(id: string, userId: string, input: PatchPropertyInput) {
+    await this.assertOwned(id, userId);
+    return this.patch(id, input);
   }
 
   async patch(id: string, input: PatchPropertyInput) {

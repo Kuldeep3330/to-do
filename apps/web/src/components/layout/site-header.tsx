@@ -11,6 +11,7 @@ import { isStaff, useMe, useSession } from '@/lib/auth/use-auth';
 const NAV = [
   { href: '/search?intent=BUY', label: 'Buy' },
   { href: '/search?intent=RENT', label: 'Rent' },
+  { href: '/list-property', label: 'List your property' },
   { href: '/contact', label: 'Contact' },
 ];
 

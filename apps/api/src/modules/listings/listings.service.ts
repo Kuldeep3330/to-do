@@ -76,6 +76,7 @@ export class ListingsService {
       ...(query.intent ? { intent: query.intent } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.q ? { title: { contains: query.q, mode: 'insensitive' as const } } : {}),
+      ...(query.unverified === 'true' ? { verifiedAt: null } : {}),
     };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.listing.findMany({
@@ -102,6 +103,86 @@ export class ListingsService {
       throw AppError.notFound('Listing not found');
     }
     return { ...toAdminListing(row), media: await this.adminMedia(id) };
+  }
+
+  async listMine(userId: string, query: AdminListingListQueryDto) {
+    const where: Prisma.ListingWhereInput = {
+      deletedAt: null,
+      createdByUserId: userId,
+      ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+      ...(query.intent ? { intent: query.intent } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.q ? { title: { contains: query.q, mode: 'insensitive' as const } } : {}),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.listing.findMany({
+        where,
+        include: ADMIN_INCLUDE,
+        orderBy: { createdAt: 'desc' },
+        skip: offsetOf(query.page, query.pageSize),
+        take: query.pageSize,
+      }),
+      this.prisma.listing.count({ where }),
+    ]);
+    return {
+      data: rows.map(toAdminListing),
+      meta: { page: query.page, pageSize: query.pageSize, total },
+    };
+  }
+
+  async getOwned(id: string, userId: string) {
+    const row = await this.prisma.listing.findFirst({
+      where: { id, createdByUserId: userId, deletedAt: null },
+      include: ADMIN_INCLUDE,
+    });
+    if (!row) {
+      throw AppError.notFound('Listing not found');
+    }
+    return { ...toAdminListing(row), media: await this.adminMedia(id) };
+  }
+
+  async assertOwned(id: string, userId: string): Promise<{ propertyId: string; status: string }> {
+    const row = await this.prisma.listing.findFirst({
+      where: { id, createdByUserId: userId, deletedAt: null },
+      select: { id: true, propertyId: true, status: true },
+    });
+    if (!row) {
+      throw AppError.notFound('Listing not found');
+    }
+    return row;
+  }
+
+  async createOwned(userId: string, input: CreateListingInput) {
+    const property = await this.prisma.property.findFirst({
+      where: { id: input.propertyId, createdByUserId: userId, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (!property || property.status !== 'ACTIVE') {
+      throw AppError.validation('Property not available', [
+        { path: 'propertyId', message: 'Property does not exist or is archived' },
+      ]);
+    }
+    return this.create(input, userId);
+  }
+
+  async patchOwned(id: string, userId: string, input: PatchListingInput) {
+    await this.assertOwned(id, userId);
+    return this.patch(id, input);
+  }
+
+  async publishOwned(id: string, userId: string) {
+    await this.assertOwned(id, userId);
+    return this.publish(id);
+  }
+
+  async pauseOwned(id: string, userId: string) {
+    await this.assertOwned(id, userId);
+    return this.pause(id);
+  }
+
+  async closeOwned(id: string, userId: string) {
+    await this.assertOwned(id, userId);
+    return this.close(id);
   }
 
   /** ORIGINAL images in display order, each with its CARD thumbnail when one exists. */
@@ -166,7 +247,7 @@ export class ListingsService {
     return toPublicListingDetail(row);
   }
 
-  async create(input: CreateListingInput) {
+  async create(input: CreateListingInput, createdByUserId?: string) {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const row = await this.prisma.$transaction(
@@ -202,6 +283,7 @@ export class ListingsService {
                 depositAmount: bigintOrNull(input.depositAmount),
                 negotiable: input.negotiable ?? false,
                 availableFrom: dateOrNull(input.availableFrom),
+                ...(createdByUserId ? { createdByUserId } : {}),
               },
               include: ADMIN_INCLUDE,
             });

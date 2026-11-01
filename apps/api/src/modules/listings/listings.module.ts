@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AdminListingsController, PublicListingsController } from './listings.controller';
+import { AdminListingsController, MeListingsController, PublicListingsController } from './listings.controller';
 import { ListingFreshnessJob } from './listings.freshness';
 import { ListingsService } from './listings.service';
 
 @Module({
-  controllers: [AdminListingsController, PublicListingsController],
+  controllers: [AdminListingsController, MeListingsController, PublicListingsController],
   providers: [ListingsService, ListingFreshnessJob],
   exports: [ListingsService],
 })

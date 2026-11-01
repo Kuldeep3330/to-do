@@ -70,7 +70,7 @@ Ordered by value for effort. Items 1 and 2 are built.
 
 | 8 | **Money model**: owner success fee, with fee rules and the fee earned on each won deal (section 8g) | Done 2026-10-19 |
 
-**Out of scope until a deal has closed:** online payments and invoicing, owner self-posting, broker marketplace, maps, native apps.
+**Out of scope until a deal has closed:** online payments and invoicing, broker marketplace, maps, native apps. Owners and sales agents can self-list; staff visit within 2 days and pause listings that are not genuine.
 
 ## 6. Money: options and default
 

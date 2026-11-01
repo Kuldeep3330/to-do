@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/account', label: 'Profile' },
+  { href: '/account/listings', label: 'My listings' },
   { href: '/account/enquiries', label: 'My enquiries' },
   { href: '/account/visits', label: 'My visits' },
   { href: '/account/saved', label: 'Saved homes' },
@@ -37,7 +38,7 @@ export function AccountNav() {
   return (
     <nav aria-label="Account" className="mb-8 flex gap-1 overflow-x-auto border-b border-border">
       {TABS.map((t) => {
-        const active = pathname === t.href;
+        const active = t.href === '/account' ? pathname === t.href : pathname === t.href || pathname.startsWith(`${t.href}/`);
         return (
           <Link
             key={t.href}

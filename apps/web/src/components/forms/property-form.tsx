@@ -9,7 +9,7 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, fieldAria } from '@/components/ui/form-controls';
 import { Alert, Card, Skeleton } from '@/components/ui/feedback';
 import { useToast } from '@/components/ui/toast';
-import { adminPropertiesApi, type PropertyInput } from '@/lib/api/endpoints';
+import { adminPropertiesApi, mePropertiesApi, type PropertyInput } from '@/lib/api/endpoints';
 import type { AdminProperty } from '@/lib/api/types';
 import { applyApiError } from '@/lib/forms';
 import { useAmenities, useCities, useLocalities } from '@/lib/queries';
@@ -22,16 +22,32 @@ import {
   type PropertyFormValues,
 } from '@/lib/schemas/property';
 
-type Props = { property?: AdminProperty };
+type Props = {
+  property?: AdminProperty;
+  scope?: 'admin' | 'me';
+  amenitiesSource?: 'admin' | 'public';
+  cancelHref?: string;
+  onCreated?: (id: string) => void;
+};
 
-export function PropertyForm({ property }: Props) {
+export function PropertyForm({
+  property,
+  scope = 'admin',
+  amenitiesSource = 'admin',
+  cancelHref,
+  onCreated,
+}: Props) {
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const cities = useCities();
-  const amenities = useAmenities();
+  const propertiesApi = scope === 'me' ? mePropertiesApi : adminPropertiesApi;
+  const amenities = useAmenities(amenitiesSource);
+  const listHref = scope === 'me' ? '/account/listings' : '/admin/properties';
+  const afterCreateHref = (id: string) =>
+    scope === 'me' ? `/account/listings?propertyId=${id}` : `/admin/properties/${id}`;
 
   const {
     register,
@@ -65,11 +81,15 @@ export function PropertyForm({ property }: Props) {
     const payload: PropertyInput = { ...values };
     try {
       const saved = property
-        ? await adminPropertiesApi.update(property.id, payload)
-        : await adminPropertiesApi.create(payload);
-      await qc.invalidateQueries({ queryKey: ['admin', 'properties'] });
+        ? await propertiesApi.update(property.id, payload)
+        : await propertiesApi.create(payload);
+      await qc.invalidateQueries({ queryKey: [scope, 'properties'] });
       toast.success(property ? 'Property updated' : 'Property created');
-      router.push(property ? '/admin/properties' : `/admin/properties/${saved.id}`);
+      if (!property && onCreated) {
+        onCreated(saved.id);
+        return;
+      }
+      router.push(property ? listHref : afterCreateHref(saved.id));
       router.refresh();
     } catch (err) {
       setFormError(applyApiError(err, setError, PROPERTY_FIELDS));
@@ -95,10 +115,14 @@ export function PropertyForm({ property }: Props) {
       <Card className="space-y-4 p-5">
         <h2 className="text-base font-semibold">Basics</h2>
         <Field
-          label="Internal title"
+          label={scope === 'me' ? 'Name for this home' : 'Internal title'}
           htmlFor="internalTitle"
           error={err('internalTitle')}
-          hint="Only staff see this. Example: “Tower B 1204, Sector 62”."
+          hint={
+            scope === 'me'
+              ? 'For your records. Example: “Tower B 1204, Sector 62”.'
+              : 'Only staff see this. Example: “Tower B 1204, Sector 62”.'
+          }
           required
         >
           <Input {...fieldAria('internalTitle', err('internalTitle'), 'x')} {...register('internalTitle')} />
@@ -228,7 +252,7 @@ export function PropertyForm({ property }: Props) {
       </Card>
 
       <div className="flex justify-end gap-2">
-        <ButtonLink href="/admin/properties" variant="outline">
+        <ButtonLink href={cancelHref ?? listHref} variant="outline">
           Cancel
         </ButtonLink>
         <Button type="submit" loading={isSubmitting}>

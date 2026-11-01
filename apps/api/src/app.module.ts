@@ -23,6 +23,7 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { MediaModule } from './modules/media/media.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OwnerEnquiriesModule } from './modules/owner-enquiries/owner-enquiries.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { SavedModule } from './modules/saved/saved.module';
@@ -52,6 +53,7 @@ import { PrismaModule } from './prisma/prisma.module';
     MediaModule,
     FinanceModule,
     LeadsModule,
+    OwnerEnquiriesModule,
     SavedModule,
     DashboardModule,
     ReportsModule,

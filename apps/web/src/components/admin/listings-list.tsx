@@ -27,15 +27,17 @@ export function ListingsList() {
   const status = get('status');
   const intent = get('intent');
   const propertyId = get('propertyId');
+  const unverified = get('unverified');
   const q = get('q');
 
   const query = useQuery({
-    queryKey: ['admin', 'listings', { status, intent, propertyId, q, page }],
+    queryKey: ['admin', 'listings', { status, intent, propertyId, unverified, q, page }],
     queryFn: () =>
       adminListingsApi.list({
         status,
         intent,
         propertyId,
+        unverified: unverified === 'true' ? 'true' : undefined,
         q: q || undefined,
         page,
         pageSize: PAGE_SIZE,
@@ -66,7 +68,7 @@ export function ListingsList() {
     [],
   );
 
-  const filtered = !!(status || intent || q || propertyId);
+  const filtered = !!(status || intent || q || propertyId || unverified);
   const meta = query.data?.meta;
 
   return (
@@ -84,7 +86,7 @@ export function ListingsList() {
 
       <FilterBar
         summary={meta ? `${meta.total.toLocaleString('en-IN')} ${meta.total === 1 ? 'listing' : 'listings'}` : undefined}
-        onClear={filtered ? () => set({ status: null, intent: null, q: null, propertyId: null }) : undefined}
+        onClear={filtered ? () => set({ status: null, intent: null, q: null, propertyId: null, unverified: null }) : undefined}
       >
         <SearchBox label="Search listings" placeholder="Search title" value={q} onCommit={(v) => set({ q: v })} />
         <div className="w-44">
@@ -102,6 +104,12 @@ export function ListingsList() {
             <option value="">Rent and sale</option>
             <option value="RENT">Rent</option>
             <option value="BUY">Sale</option>
+          </Select>
+        </div>
+        <div className="w-48">
+          <Select aria-label="Filter by verification" value={unverified} onChange={(e) => set({ unverified: e.target.value })}>
+            <option value="">All listings</option>
+            <option value="true">Unverified (visit within 2 days)</option>
           </Select>
         </div>
       </FilterBar>

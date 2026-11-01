@@ -18,6 +18,10 @@ export function useLocalities(citySlug: string | undefined) {
   });
 }
 
-export function useAmenities() {
-  return useQuery({ queryKey: ['amenities'], queryFn: locationsApi.amenities, staleTime: DAY });
+export function useAmenities(source: 'admin' | 'public' = 'admin') {
+  return useQuery({
+    queryKey: ['amenities', source],
+    queryFn: source === 'public' ? locationsApi.publicAmenities : locationsApi.amenities,
+    staleTime: DAY,
+  });
 }

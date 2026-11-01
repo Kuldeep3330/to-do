@@ -29,16 +29,19 @@ const PERMISSIONS = [
   // Money: fee amounts are visible to admins only, never to sales agents.
   'finance.read',
   'finance.manage',
+  // Own inventory only (owners and agents). Full catalogue stays listing.manage.
+  'listing.own',
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
-  CUSTOMER: ['lead.create', 'lead.read_own', 'visit.read_own'],
+  CUSTOMER: ['lead.create', 'lead.read_own', 'visit.read_own', 'listing.own'],
   SALES_AGENT: [
     'lead.create',
     'lead.read_assigned',
     'lead.update_assigned',
     'visit.manage_staff',
     'dashboard.read',
+    'listing.own',
   ],
   ADMIN: [
     'listing.manage',
@@ -59,6 +62,7 @@ const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'dashboard.read',
     'finance.read',
     'finance.manage',
+    'listing.own',
   ],
   SUPER_ADMIN: PERMISSIONS,
 };

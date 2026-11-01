@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/dialog';
 import { Alert, Card } from '@/components/ui/feedback';
 import { ListingStatusBadge } from '@/components/ui/status-badge';
 import { useToast } from '@/components/ui/toast';
-import { adminListingsApi } from '@/lib/api/endpoints';
+import { adminListingsApi, meListingsApi } from '@/lib/api/endpoints';
 import { errorDetailMessages, errorMessage } from '@/lib/api/errors';
 import { formatDate } from '@/lib/format';
 import type { AdminListing } from '@/lib/api/types';
@@ -21,7 +21,7 @@ type Command = 'publish' | 'pause' | 'close';
 const COPY: Record<Command, { title: string; body: string; confirm: string; done: string; danger?: boolean }> = {
   publish: {
     title: 'Publish this listing?',
-    body: 'It becomes visible to everyone on the public site.',
+    body: 'It becomes visible to everyone on the public site. Our team visits within 2 days and will pause it if it is not genuine.',
     confirm: 'Publish',
     done: 'Listing published',
   },
@@ -40,7 +40,16 @@ const COPY: Record<Command, { title: string; body: string; confirm: string; done
   },
 };
 
-export function PublishPanel({ listing, onChanged }: { listing: AdminListing; onChanged: () => Promise<unknown> | void }) {
+export function PublishPanel({
+  listing,
+  onChanged,
+  scope = 'admin',
+}: {
+  listing: AdminListing;
+  onChanged: () => Promise<unknown> | void;
+  scope?: 'admin' | 'me';
+}) {
+  const listingsApi = scope === 'me' ? meListingsApi : adminListingsApi;
   const toast = useToast();
   const [confirming, setConfirming] = React.useState<Command | null>(null);
   const [problem, setProblem] = React.useState<{ message: string; details: string[] } | null>(null);
@@ -49,7 +58,7 @@ export function PublishPanel({ listing, onChanged }: { listing: AdminListing; on
   const ready = checks.every((c) => c.ok);
 
   const run = useMutation({
-    mutationFn: (cmd: Command) => adminListingsApi[cmd](listing.id),
+    mutationFn: (cmd: Command) => listingsApi[cmd](listing.id),
     onSuccess: async (_d, cmd) => {
       setProblem(null);
       setConfirming(null);
@@ -134,24 +143,30 @@ export function PublishPanel({ listing, onChanged }: { listing: AdminListing; on
                 aria-hidden
               />
               {listing.verifiedAt
-                ? `Verified on ${formatDate(listing.verifiedAt)}${listing.verifiedBy ? ` by ${listing.verifiedBy}` : ''}`
-                : 'Not verified yet. Verify after a physical visit.'}
+                ? `Verified on ${formatDate(listing.verifiedAt)}${scope === 'admin' && listing.verifiedBy ? ` by ${listing.verifiedBy}` : ''}`
+                : scope === 'me'
+                  ? 'Our team will visit within 2 days to verify this listing.'
+                  : 'Not verified yet. Verify after a physical visit.'}
             </p>
-            <p>
-              Last confirmed: {listing.lastConfirmedAt ? formatDate(listing.lastConfirmedAt) : 'never'}. Published
-              listings not confirmed within the freshness window are paused automatically.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => trust.mutate('verify')} disabled={trust.isPending}>
-              {listing.verifiedAt ? 'Re-verify' : 'Mark verified'}
-            </Button>
-            {status === 'PUBLISHED' && (
-              <Button variant="outline" onClick={() => trust.mutate('confirm')} disabled={trust.isPending}>
-                Confirm available
-              </Button>
+            {scope === 'admin' && (
+              <p>
+                Last confirmed: {listing.lastConfirmedAt ? formatDate(listing.lastConfirmedAt) : 'never'}. Published
+                listings not confirmed within the freshness window are paused automatically.
+              </p>
             )}
           </div>
+          {scope === 'admin' && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => trust.mutate('verify')} disabled={trust.isPending}>
+                {listing.verifiedAt ? 'Re-verify' : 'Mark verified'}
+              </Button>
+              {status === 'PUBLISHED' && (
+                <Button variant="outline" onClick={() => trust.mutate('confirm')} disabled={trust.isPending}>
+                  Confirm available
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

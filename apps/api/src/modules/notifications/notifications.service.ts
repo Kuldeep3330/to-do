@@ -20,6 +20,16 @@ export type VisitRequestedNotice = {
   preferredSlot: string;
 };
 
+export type OwnerEnquiryNotice = {
+  name: string;
+  phone: string;
+  email: string | null;
+  intent: 'BUY' | 'RENT';
+  city: string;
+  locality: string | null;
+  message: string | null;
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -66,6 +76,37 @@ export class NotificationsService {
       subject: `Visit requested: ${notice.listingTitle}`,
       text: `${notice.name} ${maskPhone(notice.phone)} wants to visit ${notice.listingSlug} on ${when}`,
       html: `<p>${escapeHtml(notice.name)} wants to visit ${escapeHtml(notice.listingSlug)} on ${escapeHtml(when)}</p>`,
+    });
+  }
+
+  async notifyOwnerPublished(notice: {
+    title: string;
+    slug: string;
+    city: string;
+    locality: string;
+  }): Promise<void> {
+    const where = `${notice.locality}, ${notice.city}`;
+    await this.sendTemplate({
+      template: 'owner_published_ops',
+      to: env().OPS_INBOX_EMAIL,
+      subject: `Visit within 2 days: ${notice.title}`,
+      text: `A self-listed home is live and needs a visit within 2 days: ${notice.title} (${where}). Pause it if it is not genuine. /admin/listings`,
+      html: `<p>A self-listed home is live and needs a visit within 2 days: <strong>${escapeHtml(notice.title)}</strong> (${escapeHtml(where)}).</p><p>Pause it if it is not genuine.</p>`,
+    });
+  }
+
+  async notifyOwnerEnquiry(notice: OwnerEnquiryNotice): Promise<void> {
+    const intent = notice.intent === 'RENT' ? 'rent out' : 'sell';
+    const where = notice.locality ? `${notice.locality}, ${notice.city}` : notice.city;
+    const extra = notice.message ? `\n\n${notice.message}` : '';
+    await this.sendTemplate({
+      template: 'owner_enquiry_ops',
+      to: env().OPS_INBOX_EMAIL,
+      subject: `Owner wants to ${intent}: ${where}`,
+      text: `${notice.name} ${maskPhone(notice.phone)} wants to ${intent} a home in ${where}.${extra}`,
+      html: `<p>${escapeHtml(notice.name)} wants to ${escapeHtml(intent)} a home in ${escapeHtml(where)}.</p>${
+        notice.message ? `<p>${escapeHtml(notice.message)}</p>` : ''
+      }`,
     });
   }
 

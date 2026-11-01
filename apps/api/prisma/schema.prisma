@@ -165,6 +165,8 @@ model User {
   leads            Lead[]               @relation("LeadCustomer")
   assignedLeads    Lead[]               @relation("LeadAssignee")
   verifiedListings Listing[]            @relation("ListingVerifier")
+  createdProperties Property[]          @relation("PropertyCreator")
+  createdListings  Listing[]            @relation("ListingCreator")
   savedListings    SavedListing[]
   auditLogs        AuditLog[]
 
@@ -298,17 +300,20 @@ model Property {
   facing        String?        @db.VarChar(30)
   ageYears      Int?           @map("age_years") @db.SmallInt
   parkingCount  Int?           @map("parking_count") @db.SmallInt
-  internalTitle String         @map("internal_title") @db.VarChar(160)
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz(6)
+  internalTitle   String         @map("internal_title") @db.VarChar(160)
+  createdByUserId String?        @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
   locality  Locality          @relation(fields: [localityId, cityId], references: [id, cityId], onDelete: Restrict)
+  createdBy User?             @relation("PropertyCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   amenities PropertyAmenity[]
   listings  Listing[]
 
   @@index([localityId])
   @@index([cityId, type])
+  @@index([createdByUserId])
   @@map("properties")
 }
 
@@ -340,6 +345,7 @@ model Listing {
   closedAt          DateTime?     @map("closed_at") @db.Timestamptz(6)
   verifiedAt        DateTime?     @map("verified_at") @db.Timestamptz(6)
   verifiedByUserId  String?       @map("verified_by_user_id") @db.Uuid
+  createdByUserId   String?       @map("created_by_user_id") @db.Uuid
   lastConfirmedAt   DateTime?     @map("last_confirmed_at") @db.Timestamptz(6)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -347,6 +353,7 @@ model Listing {
 
   property   Property       @relation(fields: [propertyId], references: [id], onDelete: Restrict)
   verifiedBy User?          @relation("ListingVerifier", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+  createdBy  User?          @relation("ListingCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   media      Media[]
   leads      Lead[]
   visits     Visit[]
@@ -354,6 +361,7 @@ model Listing {
 
   @@index([propertyId])
   @@index([status, lastConfirmedAt])
+  @@index([createdByUserId])
   @@map("listings")
 }
 

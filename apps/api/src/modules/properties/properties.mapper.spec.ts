@@ -25,6 +25,7 @@ describe('toAdminProperty', () => {
       parkingCount: 1,
       internalTitle: 'Staff title',
       amenities: [{ amenityId: 'a1' }, { amenityId: 'a2' }],
+      createdByUserId: 'u1',
       deletedAt: null,
       createdAt: new Date('2026-10-01T00:00:00.000Z'),
       updatedAt: new Date('2026-10-02T00:00:00.000Z'),
@@ -34,6 +35,7 @@ describe('toAdminProperty', () => {
     expect(dto.lng).toBeCloseTo(77.209);
     expect(dto.areaValue).toBeCloseTo(1250.5);
     expect(dto.amenityIds).toEqual(['a1', 'a2']);
+    expect(dto.createdByUserId).toBe('u1');
     expect(dto.deletedAt).toBeNull();
     expect(dto.createdAt).toBe('2026-10-01T00:00:00.000Z');
     expect(dto).not.toHaveProperty('listings');

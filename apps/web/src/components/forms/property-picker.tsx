@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input, Select, fieldAria } from '@/components/ui/form-controls';
-import { adminPropertiesApi } from '@/lib/api/endpoints';
+import { adminPropertiesApi, mePropertiesApi } from '@/lib/api/endpoints';
 import { formatArea, formatBedrooms } from '@/lib/format';
 
 type Props = {
@@ -12,10 +12,12 @@ type Props = {
   onChange: (id: string) => void;
   error?: string;
   disabled?: boolean;
+  scope?: 'admin' | 'me';
 };
 
 /** Search-as-you-type picker over ACTIVE properties (the API caps pages at 24). */
-export function PropertyPicker({ id, value, onChange, error, disabled }: Props) {
+export function PropertyPicker({ id, value, onChange, error, disabled, scope = 'admin' }: Props) {
+  const propertiesApi = scope === 'me' ? mePropertiesApi : adminPropertiesApi;
   const [text, setText] = React.useState('');
   const [q, setQ] = React.useState('');
   React.useEffect(() => {
@@ -24,12 +26,12 @@ export function PropertyPicker({ id, value, onChange, error, disabled }: Props) 
   }, [text]);
 
   const list = useQuery({
-    queryKey: ['admin', 'properties', 'picker', q],
-    queryFn: () => adminPropertiesApi.list({ status: 'ACTIVE', q: q || undefined, pageSize: 24 }),
+    queryKey: [scope, 'properties', 'picker', q],
+    queryFn: () => propertiesApi.list({ status: 'ACTIVE', q: q || undefined, pageSize: 24 }),
   });
   const selected = useQuery({
-    queryKey: ['admin', 'properties', value],
-    queryFn: () => adminPropertiesApi.get(value),
+    queryKey: [scope, 'properties', value],
+    queryFn: () => propertiesApi.get(value),
     enabled: !!value && !list.data?.data.some((p) => p.id === value),
   });
 

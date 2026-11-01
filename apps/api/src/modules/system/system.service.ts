@@ -218,7 +218,7 @@ export class SystemService {
       {
         key: 'listings-unverified',
         title: 'Published listings without a verified badge',
-        advice: 'Your promise is that every home was visited. Visit and verify these, or pause them.',
+        advice: 'Visit within 2 days and verify, or pause listings that are not genuine.',
         entity: 'listing',
         atLabel: 'published',
         severity: 'medium',

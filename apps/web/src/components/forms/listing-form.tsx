@@ -10,7 +10,7 @@ import { Checkbox, Field, Input, Select, Textarea, fieldAria } from '@/component
 import { Alert, Card } from '@/components/ui/feedback';
 import { useToast } from '@/components/ui/toast';
 import { PropertyPicker } from '@/components/forms/property-picker';
-import { adminListingsApi } from '@/lib/api/endpoints';
+import { adminListingsApi, meListingsApi } from '@/lib/api/endpoints';
 import type { AdminListing } from '@/lib/api/types';
 import { applyApiError } from '@/lib/forms';
 import { formatINRCompact } from '@/lib/format';
@@ -35,6 +35,9 @@ type Props = {
   listing?: AdminListing;
   /** Prefill when arriving from a property page. */
   propertyId?: string;
+  scope?: 'admin' | 'me';
+  cancelHref?: string;
+  onCreated?: (id: string) => void;
 };
 
 /** Live "₹45 L" echo so a stray zero is obvious before saving. */
@@ -44,7 +47,10 @@ function MoneyPreview({ raw }: { raw: string }) {
   return <span aria-hidden>{formatINRCompact(n)}</span>;
 }
 
-export function ListingForm({ listing, propertyId }: Props) {
+export function ListingForm({ listing, propertyId, scope = 'admin', cancelHref, onCreated }: Props) {
+  const listingsApi = scope === 'me' ? meListingsApi : adminListingsApi;
+  const listHref = scope === 'me' ? '/account/listings' : '/admin/listings';
+  const afterCreateHref = (id: string) => (scope === 'me' ? `/account/listings/${id}` : `/admin/listings/${id}`);
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
@@ -83,7 +89,7 @@ export function ListingForm({ listing, propertyId }: Props) {
     try {
       if (listing) {
         const v = values as unknown as ListingEditOutput;
-        await adminListingsApi.update(listing.id, {
+        await listingsApi.update(listing.id, {
           title: v.title,
           description: v.description,
           priceAmount: v.priceAmount,
@@ -92,11 +98,11 @@ export function ListingForm({ listing, propertyId }: Props) {
           negotiable: v.negotiable,
           availableFrom: v.availableFrom,
         });
-        await qc.invalidateQueries({ queryKey: ['admin', 'listings'] });
+        await qc.invalidateQueries({ queryKey: [scope, 'listings'] });
         toast.success('Listing updated');
         router.refresh();
       } else {
-        const created = await adminListingsApi.create({
+        const created = await listingsApi.create({
           propertyId: values.propertyId,
           intent: values.intent,
           pricePeriod: pricePeriodFor(values.intent),
@@ -108,9 +114,13 @@ export function ListingForm({ listing, propertyId }: Props) {
           negotiable: values.negotiable,
           availableFrom: values.availableFrom,
         });
-        await qc.invalidateQueries({ queryKey: ['admin', 'listings'] });
+        await qc.invalidateQueries({ queryKey: [scope, 'listings'] });
         toast.success('Draft created. Add photos, then publish.');
-        router.push(`/admin/listings/${created.id}`);
+        if (onCreated) {
+          onCreated(created.id);
+          return;
+        }
+        router.push(afterCreateHref(created.id));
       }
     } catch (err) {
       setFormError(applyApiError(err, setError, LISTING_FIELDS));
@@ -126,15 +136,23 @@ export function ListingForm({ listing, propertyId }: Props) {
       {!editing && (
         <Card className="space-y-4 p-5">
           <h2 className="text-base font-semibold">What are you listing?</h2>
-          <Field label="Property" htmlFor="propertyId" error={err('propertyId')} required>
-            <Controller
-              control={control}
-              name="propertyId"
-              render={({ field }) => (
-                <PropertyPicker id="propertyId" value={field.value} onChange={field.onChange} error={err('propertyId')} />
-              )}
-            />
-          </Field>
+          {!propertyId && (
+            <Field label="Property" htmlFor="propertyId" error={err('propertyId')} required>
+              <Controller
+                control={control}
+                name="propertyId"
+                render={({ field }) => (
+                  <PropertyPicker
+                    id="propertyId"
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={err('propertyId')}
+                    scope={scope}
+                  />
+                )}
+              />
+            </Field>
+          )}
           <Field
             label="Listing type"
             htmlFor="intent"
@@ -209,7 +227,7 @@ export function ListingForm({ listing, propertyId }: Props) {
       </Card>
 
       <div className="flex justify-end gap-2">
-        <ButtonLink href="/admin/listings" variant="outline">
+        <ButtonLink href={cancelHref ?? listHref} variant="outline">
           Cancel
         </ButtonLink>
         <Button type="submit" loading={isSubmitting}>

@@ -89,6 +89,7 @@ export type AdminListing = {
   verifiedBy: string | null;
   lastConfirmedAt: string | null;
   originalCount: number;
+  createdByUserId: string | null;
   property: {
     id: string;
     type: PropertyType;
@@ -128,6 +129,7 @@ export type AdminProperty = {
   parkingCount: number | null;
   internalTitle: string;
   amenityIds: string[];
+  createdByUserId: string | null;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;

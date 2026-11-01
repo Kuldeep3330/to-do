@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Alert } from '@/components/ui/feedback';
 import { useToast } from '@/components/ui/toast';
-import { adminMediaApi } from '@/lib/api/endpoints';
+import { adminMediaApi, meMediaApi } from '@/lib/api/endpoints';
 import { errorMessage } from '@/lib/api/errors';
 import type { AdminListingMedia, ListingStatus } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
@@ -30,9 +30,11 @@ type Props = {
   media: AdminListingMedia[];
   status: ListingStatus;
   onChanged: () => Promise<unknown> | void;
+  scope?: 'admin' | 'me';
 };
 
-export function MediaManager({ listingId, media, status, onChanged }: Props) {
+export function MediaManager({ listingId, media, status, onChanged, scope = 'admin' }: Props) {
+  const mediaApi = scope === 'me' ? meMediaApi : adminMediaApi;
   const toast = useToast();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [pending, setPending] = React.useState<Pending[]>([]);
@@ -65,7 +67,7 @@ export function MediaManager({ listingId, media, status, onChanged }: Props) {
     // Sequential: the API assigns sort order under a row lock, and keeps order = upload order.
     for (const { file, key } of entries) {
       try {
-        await adminMediaApi.upload(listingId, file);
+        await mediaApi.upload(listingId, file);
         setPending((p) => p.filter((x) => x.key !== key));
         await onChanged();
       } catch (e) {
@@ -83,7 +85,7 @@ export function MediaManager({ listingId, media, status, onChanged }: Props) {
     try {
       // Write explicit positions for every row whose stored order differs (handles ties).
       await Promise.all(
-        order.map((m, i) => (m.sortOrder === i ? null : adminMediaApi.update(m.id, { sortOrder: i }))),
+            order.map((m, i) => (m.sortOrder === i ? null : mediaApi.update(m.id, { sortOrder: i }))),
       );
       await onChanged();
     } catch (e) {
@@ -97,7 +99,7 @@ export function MediaManager({ listingId, media, status, onChanged }: Props) {
     if (!deleting) return;
     setDeleteBusy(true);
     try {
-      await adminMediaApi.remove(deleting.id);
+      await mediaApi.remove(deleting.id);
       toast.success('Photo deleted');
       setDeleting(null);
       await onChanged();

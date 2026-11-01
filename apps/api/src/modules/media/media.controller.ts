@@ -12,6 +12,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Audit } from '../../common/decorators/audit.decorator';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { AppError } from '../../common/errors/app-error';
 import { PatchMediaDto } from './media.dto';
@@ -46,6 +47,60 @@ export class ListingMediaController {
           }
         : undefined,
     );
+  }
+}
+
+@Controller('api/v1/me/listings')
+export class MeListingMediaController {
+  constructor(private readonly media: MediaService) {}
+
+  @RequirePermissions('listing.own')
+  @Post(':id/media')
+  @HttpCode(201)
+  @Audit('CREATE_MEDIA', 'media')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_ORIGINAL_BYTES },
+    }),
+  )
+  async upload(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    return this.media.uploadOwned(
+      requireUuid(id, 'Listing not found'),
+      user.id,
+      file
+        ? {
+            buffer: file.buffer,
+            mimetype: file.mimetype,
+            originalname: file.originalname,
+            size: file.size,
+          }
+        : undefined,
+    );
+  }
+}
+
+@Controller('api/v1/me/media')
+export class MeMediaController {
+  constructor(private readonly media: MediaService) {}
+
+  @RequirePermissions('listing.own')
+  @Patch(':id')
+  @Audit('REORDER_MEDIA', 'media')
+  async patch(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() body: PatchMediaDto) {
+    return { data: await this.media.patchSortOrderOwned(requireUuid(id, 'Media not found'), user.id, body.sortOrder) };
+  }
+
+  @RequirePermissions('listing.own')
+  @Delete(':id')
+  @HttpCode(200)
+  @Audit('DELETE_MEDIA', 'media')
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.media.removeOwned(requireUuid(id, 'Media not found'), user.id);
   }
 }
 

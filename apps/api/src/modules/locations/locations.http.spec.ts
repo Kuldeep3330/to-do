@@ -111,6 +111,17 @@ describe('locations and amenities HTTP', () => {
     expect(pub.body.data.map((l: { slug: string }) => l.slug)).toContain(slug);
   });
 
+  it('lists active amenities publicly without auth', async () => {
+    const res = await request(app.getHttpServer()).get('/api/v1/amenities');
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((a: { code: string }) => a.code)).toContain('lift');
+    expect(res.body.data[0]).toEqual({
+      id: expect.any(String),
+      code: expect.any(String),
+      name: expect.any(String),
+    });
+  });
+
   it('lists amenities for property managers only', async () => {
     const anon = await request(app.getHttpServer()).get('/api/v1/admin/amenities');
     expect(anon.status).toBe(401);
