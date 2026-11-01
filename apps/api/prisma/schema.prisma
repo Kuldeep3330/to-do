@@ -550,6 +550,65 @@ model DiscoverPreferenceProfile {
   @@map("discover_preference_profiles")
 }
 
+enum PollStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("poll_status")
+}
+
+/// A Community Insights poll. It is open only while PUBLISHED and inside [opensAt, closesAt); the server enforces this.
+model CommunityPoll {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  question  String      @db.VarChar(200)
+  status    PollStatus  @default(DRAFT)
+  opensAt   DateTime?   @map("opens_at") @db.Timestamptz(6)
+  closesAt  DateTime?   @map("closes_at") @db.Timestamptz(6)
+  sortOrder Int         @default(0) @map("sort_order")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  options CommunityPollOption[]
+  votes   CommunityPollVote[]
+
+  @@index([status, sortOrder])
+  @@map("community_polls")
+}
+
+model CommunityPollOption {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pollId   String @map("poll_id") @db.Uuid
+  label    String @db.VarChar(120)
+  position Int
+
+  poll  CommunityPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes CommunityPollVote[]
+
+  @@unique([id, pollId])
+  @@index([pollId, position])
+  @@map("community_poll_options")
+}
+
+/// One anonymous vote. `voterHash` is a per-poll hash of a random browser key, so votes cannot be linked across polls
+/// or to a person. It exists only to reduce repeat voting; it is not proof of one-person-one-vote.
+model CommunityPollVote {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pollId     String   @map("poll_id") @db.Uuid
+  optionId   String   @map("option_id") @db.Uuid
+  voterHash  String   @map("voter_hash") @db.Char(64)
+  localityId String?  @map("locality_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  poll   CommunityPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option CommunityPollOption @relation(fields: [optionId, pollId], references: [id, pollId], onDelete: Cascade)
+
+  @@unique([pollId, voterHash])
+  @@index([pollId, optionId])
+  @@index([pollId, localityId])
+  @@map("community_poll_votes")
+}
+
 model AnalyticsEvent {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String   @db.VarChar(80)
