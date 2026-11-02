@@ -1,5 +1,16 @@
 import { api, apiData } from '../client';
 import type {
+  AdminPoll,
+  DiscoverAnswers,
+  DiscoverDefinition,
+  DiscoverProfile,
+  DiscoverSlug,
+  DiscoverStoredResult,
+  DiscoverSubmitResponse,
+  PollInsights,
+  PublicPoll,
+} from '@/lib/discover/types';
+import type {
   AdminLead,
   AdminUser,
   StaffMember,
@@ -201,6 +212,39 @@ export const publicApi = {
     email?: string;
     message?: string;
   }) => api<{ data: { ok: true } }>('/api/v1/owner-enquiries', { method: 'POST', body }),
+};
+
+/* ───────────── discover ───────────── */
+export const discoverApi = {
+  definition: (slug: DiscoverSlug) => apiData<DiscoverDefinition>(`/api/v1/discover/assessments/${slug}`),
+  start: (slug: DiscoverSlug) => api<unknown>(`/api/v1/discover/assessments/${slug}/start`, { method: 'POST' }),
+  submit: (slug: DiscoverSlug, body: { answers: DiscoverAnswers; saveToAccount?: boolean }) =>
+    apiData<DiscoverSubmitResponse>(`/api/v1/discover/assessments/${slug}/responses`, { method: 'POST', body }),
+  result: (token: string) => apiData<DiscoverStoredResult>(`/api/v1/discover/results/${encodeURIComponent(token)}`),
+  claim: (token: string) =>
+    apiData<{ saved: true }>(`/api/v1/discover/results/${encodeURIComponent(token)}/claim`, { method: 'POST' }),
+  profile: () => apiData<DiscoverProfile | null>('/api/v1/discover/me/profile'),
+  deleteMine: () => api<unknown>('/api/v1/discover/me', { method: 'DELETE' }),
+};
+
+/* ───────────── community polls ───────────── */
+export const communityApi = {
+  list: () => apiData<PublicPoll[]>('/api/v1/community/polls'),
+  vote: (pollId: string, body: { optionId: string; localityId?: string }) =>
+    apiData<PublicPoll>(`/api/v1/community/polls/${pollId}/vote`, { method: 'POST', body }),
+  insights: (pollId: string) => apiData<PollInsights>(`/api/v1/community/polls/${pollId}/insights`),
+};
+
+export type PollInput = { question: string; options: string[]; opensAt?: string | null; closesAt?: string | null };
+
+export const adminPollsApi = {
+  list: () => apiData<AdminPoll[]>('/api/v1/admin/community/polls'),
+  create: (body: PollInput) => apiData<{ id: string }>('/api/v1/admin/community/polls', { method: 'POST', body }),
+  update: (id: string, body: Partial<PollInput>) =>
+    apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}`, { method: 'PATCH', body }),
+  publish: (id: string) => apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}/publish`, { method: 'POST' }),
+  close: (id: string) => apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}/close`, { method: 'POST' }),
+  archive: (id: string) => apiData<{ id: string }>(`/api/v1/admin/community/polls/${id}/archive`, { method: 'POST' }),
 };
 
 /* ───────────── admin staff / users ───────────── */

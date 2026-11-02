@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SearchX, X } from 'lucide-react';
+import { SavedPreferencesBanner } from '@/components/discover/saved-preferences-banner';
 import { FilterBar } from '@/components/search/filter-bar';
 import { SortSelect } from '@/components/search/sort-select';
 import { ListingGrid } from '@/components/listing/listing-card';
@@ -78,6 +79,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </p>
       </header>
 
+      <SavedPreferencesBanner filtersActive={hasActiveFilters(filters)} />
       <FilterBar filters={filters} />
 
       {chips.length > 0 && (

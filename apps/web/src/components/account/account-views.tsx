@@ -31,6 +31,7 @@ const TABS = [
   { href: '/account/enquiries', label: 'My enquiries' },
   { href: '/account/visits', label: 'My visits' },
   { href: '/account/saved', label: 'Saved homes' },
+  { href: '/account/discover', label: 'My preferences' },
 ];
 
 export function AccountNav() {

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ListChecks,
   ScrollText,
+  Vote,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -40,6 +41,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: '/admin/visits', label: 'Visits', icon: CalendarCheck },
       { href: '/admin/reports', label: 'Reports', icon: BarChart3, adminOnly: true },
     ],
+  },
+  {
+    label: 'Community',
+    items: [{ href: '/admin/polls', label: 'Polls', icon: Vote, adminOnly: true }],
   },
   {
     label: 'Settings',

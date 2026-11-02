@@ -12,6 +12,7 @@ const NAV = [
   { href: '/search?intent=BUY', label: 'Buy' },
   { href: '/search?intent=RENT', label: 'Rent' },
   { href: '/list-property', label: 'List your property' },
+  { href: '/discover', label: 'Discover' },
   { href: '/contact', label: 'Contact' },
 ];
 
